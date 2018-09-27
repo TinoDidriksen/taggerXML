@@ -116,7 +116,7 @@ static char * getXoptionsFile()
     
     //fprintf(stderr,"Initialising DAQPreprocess, using: %s\n",basedir);
     
-    //loff FILE * fp = fopen("xoptions","r");
+    //loff FILE * fp = fopen("xoptions","rb");
     return basedir;
     }
 
@@ -125,7 +125,7 @@ long option(const char * key)
     char * XoptionsFile = getXoptionsFile();
     if(XoptionsFile)
         {
-        FILE * fp = fopen(getXoptionsFile(),"r");
+        FILE * fp = fopen(getXoptionsFile(),"rb");
         if(fp)
             {
             char line[256];
@@ -153,8 +153,8 @@ long option(const char * key)
 
 char * coption(const char * key) 
     {
-    //loff FILE * fp = fopen("xoptions","r");
-    FILE * fp = fopen(getXoptionsFile(),"r");
+    //loff FILE * fp = fopen("xoptions","rb");
+    FILE * fp = fopen(getXoptionsFile(),"rb");
     if(fp)
         {
         static /*Bart 20030224*/ char line[256];

@@ -116,7 +116,7 @@ int final_state_tagger( const char * Contextualrulefile
         fprintf(stderr,"FINAL STATE TAGGER:: READ IN LEXICON\n");
         }
     /* read in rule file, and process each rule */
-    changefile = fopen(Contextualrulefile, "r");
+    changefile = fopen(Contextualrulefile, "rb");
     if(!changefile)
         {
         fprintf(stderr,"Cannot open contextual rule file \"%s\" for reading\n",Contextualrulefile);

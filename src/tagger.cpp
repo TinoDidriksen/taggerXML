@@ -126,7 +126,7 @@ bool createRegistries
     if (! START_ONLY_FLAG) 
 #endif
         {
-        lexicon = fopen(Lexicon,"r");
+        lexicon = fopen(Lexicon,"rb");
         if(!lexicon)
             {
             fprintf(stderr,"Cannot open lexicon \"%s\" for reading\n",Lexicon);
@@ -159,7 +159,7 @@ bool createRegistries
     lexicon_hash = *LEXICON_HASH = Registry_create(Registry_strcmp,Registry_strhash);
     Registry_size_hint(lexicon_hash,tagnums);
 
-    lexicon = fopen(Lexicon, "r");
+    lexicon = fopen(Lexicon, "rb");
     if(!lexicon)
         {
         fprintf(stderr,"Cannot open lexicon \"%s\" for reading\n",Lexicon);
@@ -280,7 +280,7 @@ bool createRegistries
     good_right_hash = Registry_create(Registry_strcmp,Registry_strhash);
     good_left_hash = Registry_create(Registry_strcmp,Registry_strhash);
     
-    rulefile = fopen(Lexicalrulefile,"r");
+    rulefile = fopen(Lexicalrulefile,"rb");
     if(!rulefile)
         {
         fprintf(stderr,"Cannot open lexical rule file \"%s\" for reading\n",Lexicalrulefile);
@@ -337,7 +337,7 @@ bool createRegistries
     /* read in bigram file */
     bigram_hash = *BIGRAM_HASH = Registry_create(Registry_strcmp,Registry_strhash);
     
-    bigrams = fopen(Bigrams,"r");
+    bigrams = fopen(Bigrams,"rb");
     if(!bigrams)
         {
         fprintf(stderr,"Cannot open bigram file \"%s\" for reading\n",Bigrams);
@@ -381,7 +381,7 @@ bool createRegistries
     if (Wordlist) 
         {
         int numwordentries = 0;
-        wordlist = fopen(Wordlist,"r");
+        wordlist = fopen(Wordlist,"rb");
         if(!wordlist)
             {
             fprintf(stderr,"Cannot open word lits \"%s\" for reading\n",Wordlist);
@@ -395,7 +395,7 @@ bool createRegistries
         fclose(wordlist);
         wordlist_hash = *WORDLIST_HASH = Registry_create(Registry_strcmp,Registry_strhash);
         Registry_size_hint(wordlist_hash,numwordentries);
-        wordlist = fopen(Wordlist,"r");
+        wordlist = fopen(Wordlist,"rb");
         if(!wordlist)
             {
             fprintf(stderr,"Cannot open word lits \"%s\" for reading\n",Wordlist);

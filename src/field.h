@@ -28,6 +28,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "defines.h"
 #include <stdlib.h> // gcc: size_t
 
+namespace {
+    char _empty[] = "";
+}
+
 class field
     {
 #ifdef COUNTOBJECTS
@@ -96,7 +100,7 @@ class readValue : public field
             char * getString()
             {
             if(pos == 0)
-                return "";
+                return _empty;
             return word;
             }
         virtual char * read(char * kar,field *& nextfield);

@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 
     if(Option.Output != NULL)
         {
-        if(freopen(Option.Output,"w",stdout) == NULL)
+        if(freopen(Option.Output,"wb",stdout) == NULL)
             {
             fprintf(stderr,"Cannot reassign stdout to %s\n",Option.Output);
             return 1;
@@ -114,10 +114,10 @@ int main(int argc, char **argv)
         // Bart 20090824
         // Background: a bug in VC2008 causes "> myoutput" to be interpreted as two extra arguments by the debugger.
         // Workaround: Just add myoutput as an extra argument during debugging. (without >)
-        //freopen(argv[6+temp],"w",stdout);
+        //freopen(argv[6+temp],"wb",stdout);
             {
             if(Option.Output == NULL)
-                freopen(argv[i],"w",stdout);
+                freopen(argv[i],"wb",stdout);
             }
 #else
             {
@@ -130,11 +130,6 @@ int main(int argc, char **argv)
     if(!Option.Lexicon)
         {
         fprintf(stderr,"Lexicon not defined\n");
-        return 1;
-        }
-    else if(!Option.Corpus)
-        {
-        fprintf(stderr,"Corpus not defined\n");
         return 1;
         }
     else if(!Option.Bigrams)
@@ -159,6 +154,12 @@ int main(int argc, char **argv)
                         )
       )
         return 1;
+
+    if (!Option.Corpus)
+    {
+        fprintf(stderr, "Corpus not defined\n");
+        return 1;
+    }
 
 #if STREAM
     ifstream corpus(Option.Corpus,ios::binary);

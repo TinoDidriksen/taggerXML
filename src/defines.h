@@ -33,7 +33,7 @@ non-const character strings.
 // It should make no difference wether one chooses WITHSEENTAGGING 0 and WITHWORDS 0 or WITHSEENTAGGING 1 and WITHWORDS 1.
 // If it does, the lexicon probably has multiple lines for the same word, which is an error. (Bart 20090831)
 #define MAXTAGLEN 256  /* max char length of pos tags */
-#define MAXWORDLEN 256 /* max char length of words */
+#define MAXWORDLEN 512 /* max char length of words */
 #define MAXAFFIXLEN 5  /* max length of affixes being considered */
 #define STREAM 0
 

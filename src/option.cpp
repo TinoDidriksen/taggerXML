@@ -267,7 +267,7 @@ optionStruct::optionStruct():
         {
         char ** poptions;
         char * options;
-        FILE * fpopt = fopen(locoptarg,"r");
+        FILE * fpopt = fopen(locoptarg,"rb");
         OptReturnTp result = GoOn;
         if(fpopt)
             {
