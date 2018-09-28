@@ -1,0 +1,9 @@
+[submodule "deps/hashmap"]
+	path = deps/hashmap
+	url = https://github.com/kuhumcst/hashmap.git
+[submodule "deps/letterfunc"]
+	path = deps/letterfunc
+	url = https://github.com/kuhumcst/letterfunc.git
+[submodule "deps/parsesgml"]
+	path = deps/parsesgml
+	url = https://github.com/kuhumcst/parsesgml.git
