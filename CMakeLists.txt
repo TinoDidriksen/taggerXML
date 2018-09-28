@@ -35,7 +35,7 @@ else()
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 	# Require latest possible C++ standard
-	foreach(flag "-std=c++20" "-std=c++2a" "-std=c++17" "-std=c++1z" "-std=c++14" "-std=c++1y")
+	foreach(flag "-std=c++20" "-std=c++2a" "-std=c++17" "-std=c++1z")
 		string(REGEX REPLACE "[^a-z0-9]" "-" _flag ${flag})
 		CHECK_CXX_COMPILER_FLAG(${flag} COMPILER_SUPPORTS_${_flag})
 		if(COMPILER_SUPPORTS_${_flag})
@@ -45,7 +45,7 @@ else()
 		endif()
 	endforeach()
 	if(NOT _ENABLED_CXX)
-		message(FATAL_ERROR "Could not enable at least C++14 (C++1y) - upgrade your compiler")
+		message(FATAL_ERROR "Could not enable at least C++1z (C++17) - upgrade your compiler")
 	endif()
 endif()
 

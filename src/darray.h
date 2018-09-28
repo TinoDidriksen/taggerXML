@@ -4,6 +4,11 @@
 #include "sysdep.h"
 #include "bool.h"
 
+#include <vector>
+#include <array>
+#include <string_view>
+using NewDarray = std::vector<std::array<std::string_view, 6>>;
+
 typedef struct st_Darray *Darray;
 
 extern Darray Darray_create(NOARGS);

@@ -1,3 +1,18 @@
+# Boost
+find_path(Boost_LOCAL NAMES boost/config.hpp PATHS "${CMAKE_CURRENT_SOURCE_DIR}/../include" NO_DEFAULT_PATH)
+if(Boost_LOCAL)
+	set(BOOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../include")
+	find_package(Boost 1.53.0)
+endif()
+if(NOT Boost_FOUND)
+	unset(BOOST_ROOT)
+	message(STATUS "Did not find Boost locally; trying globally...")
+	message(STATUS "If this doesn't work, run ./get-boost.sh and try again.")
+	find_package(Boost 1.53.0 REQUIRED)
+endif()
+include_directories(${Boost_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
+
 set(TAGGERXML_HEADERS
 	argopt.h
 	bool.h

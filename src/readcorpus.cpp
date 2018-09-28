@@ -6,11 +6,7 @@
 #include <string.h>
 
 int readcorpus (
-#if STREAM
-                istream & corpus,
-#else
-                FILE * corpus,
-#endif
+                std::istream & corpus,
                char *** WORD_CORPUS_ARRAY,
                char *** TAG_CORPUS_ARRAY,
                int corpussize                
@@ -31,14 +27,8 @@ int readcorpus (
 
     if(corpus)
         {
-#if STREAM
-        while(!corpus.eof())
+        while(corpus.getline(line, sizeof(line)))
             {
-            corpus.getline(line,sizeof(line));
-#else
-        while(fgets(line,sizeof(line),corpus) != NULL) 
-            {
-#endif
             if(not_just_blank(line))
                 {  
                 char **split_ptr;
@@ -72,11 +62,9 @@ int readcorpus (
                 }
             }
         }
-#if STREAM
+
     corpus.clear();
-    corpus.seekg(0, ios::beg);
-#else
-    rewind(corpus);
-#endif
+    corpus.seekg(0, std::ios::beg);
+
     return corpus_array_index;
     }

@@ -3,14 +3,7 @@
 
 #include "defines.h"
 #include <string.h>
-#if STREAM
-# include <iostream>
-# ifndef __BORLANDC__
-using namespace std;
-# endif
-#else
-# include <stdio.h>
-#endif
+#include <iostream>
 
 
 extern void (*print)(FILE * fp,const char * m_word);

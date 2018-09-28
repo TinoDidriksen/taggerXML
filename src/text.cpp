@@ -21,22 +21,12 @@ const char * token::getWord()
     }
 
 
-const char * 
-#if STREAM
-copy(ostream & fp,const char * o,const char * end)
+const char * copy(std::ostream & fp,const char * o,const char * end)
     {
     for(;o < end;++o)
         fp << *o;
     return o;
     }
-#else
-copy(FILE * fp,const char * o,const char * end)
-    {
-    for(;o < end;++o)
-        fputc(*o,fp);
-    return o;
-    }
-#endif
 
 
 #ifdef COUNTOBJECTS
@@ -213,11 +203,7 @@ text::text(/*bool nice*/)
 #endif
     }
 
-#if STREAM
-text::text(istream & fpi,bool FINAL_ONLY_FLAG)
-#else
-text::text(FILE * fpi,bool FINAL_ONLY_FLAG)
-#endif
+text::text(std::istream & fpi,bool FINAL_ONLY_FLAG)
            :alltext(NULL)
            ,total(0)
            ,fields(0)
@@ -226,15 +212,10 @@ text::text(FILE * fpi,bool FINAL_ONLY_FLAG)
     ++COUNT;
 #endif
     
-#if STREAM
-    fpi.seekg(0,ios::end);
-    long filesize = fpi.tellg();
-    fpi.seekg(0,ios::beg);
-#else
-    fseek(fpi,0,SEEK_END);
-    long filesize = ftell(fpi);
-    ::rewind(fpi);
-#endif
+    fpi.seekg(0, std::ios::end);
+    long filesize = static_cast<long>(fpi.tellg());
+    fpi.seekg(0, std::ios::beg);
+
     bool intoken = false;
     bool inaline = false;
     numberOfTokens = 0;
@@ -242,17 +223,10 @@ text::text(FILE * fpi,bool FINAL_ONLY_FLAG)
         {
         alltext = new char[filesize+1];
         char * p = alltext;
-#if STREAM
         char * e = alltext + filesize;
         char kar;
-        while(p < e)
+        while(p < e && fpi >> kar)
             {
-            fpi >> kar;
-#else
-        int kar;
-        while((kar = getc(fpi)) != EOF)
-            {
-#endif
             if(intoken)
                 {
                 switch(kar)
@@ -416,7 +390,7 @@ text::text(FILE * fpi,bool FINAL_ONLY_FLAG)
     }
 
     int X = 0;
-    token::token():wordPrePos(0),PreTag(0),Pos(0),firstOfLine(false),lastOfLine(false)
+    token::token():wordPrePos(0),PreTag(0),firstOfLine(false),lastOfLine(false)
         {
         ++X;
         }
@@ -436,13 +410,7 @@ text::text(FILE * fpi,bool FINAL_ONLY_FLAG)
         }
 
 
-void text::printUnsorted(
-#if STREAM
-                        ostream & fpo
-#else
-                        FILE * fpo            
-#endif
-                        )
+void text::printUnsorted(std::ostream & fpo)
     {
     if(this->alltext)
         {
@@ -459,21 +427,15 @@ void text::printUnsorted(
                 if(!o)
                     o = end;
                 }
-            char * p = Token[k].Pos;
-            if(p)
+            auto p = Token[k].Pos;
+            if(!p.empty())
                 {
-#if STREAM
                 fpo << '/';
-#else
-                fputc('/',fpo);
-#endif
 
-                while(*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r')
-#if STREAM
-                    fpo << *p++;
-#else
-                    fputc(*p++,fpo);
-#endif
+                while (!p.empty() && p.front() != ' ' && p.front() != '\t' && p.front() != '\n' && p.front() != '\r') {
+                    fpo << p.front();
+                    p.remove_prefix(1);
+                }
                 }
             }
         o = copy(fpo,o,o+strlen(o));

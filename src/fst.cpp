@@ -17,36 +17,40 @@ PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.   */
 #include <string.h>
 #include <stdlib.h>
 
-bool cmppos(char * pos,char * p)
+inline bool cmppos(std::string_view pos, std::string_view p) {
+    // This is not quite like .find() != npos because it must only match space-delimited substrings
+    while (!p.empty())
     {
-    while(*p)
+        auto t = pos;
+        while (!t.empty() && t.front() == p.front())
         {
-        char * t = pos;
-        while(*t && *t == *p)
-            {
-            ++t;
-            ++p;
-            }
-        if(!*t && (!*p || *p == ' '))
+            t.remove_prefix(1);
+            p.remove_prefix(1);
+        }
+        if (t.empty() && (p.empty() || p.front() == ' '))
             return true;
-        while(*p && *p++ != ' ')
-            ;
+        while (!p.empty() && p.front() != ' ') {
+            p.remove_prefix(1);
         }
-    return false;
+        if (!p.empty() && p.front() == ' ') {
+            p.remove_prefix(1);
+        }
     }
+    return false;
+}
 
-bool sametokpos(char * pos,token * tok)
+bool sametokpos(std::string_view pos,token * tok)
     {
-    char * p = tok->Pos;
-    if(p)
+    auto p = tok->Pos;
+    if(!tok->Pos.empty())
         {
-        while(*pos && *pos == *p)
+        while(!pos.empty() && pos.front() == p.front())
             {
-            ++pos;
-            ++p;
+            pos.remove_prefix(1);
+            p.remove_prefix(1);
             }
         }
-    return !*pos && (!*p || *p == ' '/* || *p == '\t'*/);
+    return pos.empty() && (p.empty() || p.front() == ' '/* || p.front() == '\t'*/);
     }
 
 char * shift(char * line)
@@ -69,15 +73,11 @@ int final_state_tagger( const char * Contextualrulefile
 #if WITHSEENTAGGING
                        , Registry SEENTAGGING
 #endif
-                       , Registry WORDS
+                       , NewRegistry& WORDS
 #endif
                        , text * Corpus
                        , optionStruct * Options
-#if STREAM
-                       , ostream & fpout
-#else
-                       , FILE * fpout
-#endif
+                       , std::ostream & fpout
                        )
     {
     if(Corpus->numberOfTokens <= 0)
@@ -232,7 +232,7 @@ int final_state_tagger( const char * Contextualrulefile
                        || Registry_get(SEENTAGGING,atempstr2)   // SEENTAGGING contains word tag pairs
                        ) 
 #else
-                    char * tagsToMatch = (char *)Registry_get(WORDS,curwd); // WORDS (the Lexicon) contains word tag tag tag ... sequences
+                    auto tagsToMatch = find_or_default(WORDS,curwd); // WORDS (the Lexicon) contains word tag tag tag ... sequences
                     /*
                     while(tagsToMatch)
                         {
@@ -257,7 +257,7 @@ int final_state_tagger( const char * Contextualrulefile
                         // is one of the allowed tags according to the lexicon,
                         // or if the lexicon does not contain the word.
                         */
-                    if(!tagsToMatch || cmppos(neww,tagsToMatch))
+                    if(tagsToMatch.empty() || cmppos(neww,tagsToMatch))
 
 #endif
 #endif

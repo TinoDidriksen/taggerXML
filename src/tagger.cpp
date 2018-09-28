@@ -23,42 +23,111 @@ PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.   */
 #include <string.h>
 #include <stdlib.h>
 
-#if STREAM
-# include <fstream>
-# if defined __BORLANDC__
-#  include <strstrea.h>
-# else
-#  ifdef __GNUG__
-#   if __GNUG__ > 2
-#    include <sstream>
-#   else
-#    include <strstream.h>
-#   endif
-#  else
-#   include <sstream>
-#  endif
-# endif
-# ifndef __BORLANDC__
-using namespace std;
-# endif
-#endif
+#define BOOST_DATE_TIME_NO_LIB 1
+#include <boost/interprocess/file_mapping.hpp>
+#include <boost/interprocess/mapped_region.hpp>
 
+#include <fstream>
 
-static const char * Lexicon;
-static const char * Bigrams;
-static const char * Lexicalrulefile;
+namespace bi = ::boost::interprocess;
+struct mmap_region {
+    bi::file_mapping fmap;
+    bi::mapped_region mreg;
+    const char *buf;
+    size_t size;
+
+    mmap_region() {}
+
+    mmap_region(const char *fname)
+        : fmap(fname, bi::read_only)
+        , mreg(fmap, bi::read_only)
+        , buf(reinterpret_cast<const char*>(mreg.get_address()))
+        , size(mreg.get_size())
+    {}
+};
+mmap_region lexicon_mmap;
+mmap_region lrf_mmap;
+mmap_region bigram_mmap;
+mmap_region wordlist_mmap;
+
+template<typename C>
+inline auto is_space(const C& c) {
+    return ((c == ' ') || (c == '\t') || (c == '\r') || (c == '\n'));
+}
+
+inline auto nextline(mmap_region& reg, std::string_view line = {}) {
+    const char *start = reg.buf;
+    const char *end = reg.buf + reg.size;
+
+    // If we were already reading lines, start from the previous line's end
+    if (!line.empty()) {
+        start = &line.back() + 1;
+    }
+
+    // Skip leading space, which also skips the newline that the old back() might be parked behind
+    // Also skips empty lines, which is desired behavior
+    while (start < end && is_space(*start)) {
+        ++start;
+    }
+    if (start >= end) {
+        return std::string_view{};
+    }
+
+    // Find the next newline...
+    const char *stop = start;
+    while (stop < end && *stop != '\n') {
+        ++stop;
+    }
+    // ...but trim trailing whitespace
+    while (stop > start && is_space(stop[-1])) {
+        --stop;
+    }
+
+    return std::string_view{ start, static_cast<size_t>(stop - start) };
+};
+
+template<size_t N>
+inline auto split(std::string_view str) {
+    std::array<std::string_view, N> strs;
+
+    while (!str.empty() && is_space(str.front())) {
+        str.remove_prefix(1);
+    }
+
+    auto start = &str.front();
+    auto end = &str.back() + 1;
+
+    // Split the first N-1 nicely...
+    for (size_t n = 0; n < N - 1 && start < end; ++n) {
+        auto stop = start;
+        while (stop < end && !is_space(*stop)) {
+            ++stop;
+        }
+
+        strs[n] = std::string_view{ start, static_cast<size_t>(stop - start) };
+
+        start = stop;
+        while (start < end && is_space(*start)) {
+            ++start;
+        }
+    }
+    // ...but the last part should just contain whatever is left in the input
+    strs[N - 1] = std::string_view{ start, static_cast<size_t>(end - start) };
+
+    return strs;
+}
+
 static const char * Contextualrulefile;
 static bool START_ONLY_FLAG;
 static bool FINAL_ONLY_FLAG;
-static char * wdlistname; 
 
 static int corpussize;
 static int linenums;
 static int tagnums;
-static Registry LEXICON_HASH;
-static Registry BIGRAM_HASH;
-static Registry WORDLIST_HASH;
-static Darray RULE_ARRAY;
+static NewRegistry LEXICON_HASH;
+static SV2_Set BIGRAM_HASH;
+static SV_Set WORDLIST_HASH;
+static NewDarray RULE_ARRAY;
 
 #if RESTRICT_MOVE
 #if WITHSEENTAGGING
@@ -79,9 +148,9 @@ bool createRegistries
         Registry * WORDS,
 #endif
 #endif
-        Registry * LEXICON_HASH,
-        Registry * BIGRAM_HASH,
-        Registry * WORDLIST_HASH,
+        NewRegistry& LEXICON_HASH,
+        SV2_Set& BIGRAM_HASH,
+        SV_Set& WORDLIST_HASH,
         const char * Lexicon,
         const char * Lexicalrulefile,
         const char * Bigrams,
@@ -89,334 +158,68 @@ bool createRegistries
 #if !RESTRICT_MOVE
         int START_ONLY_FLAG,
 #endif
-        Darray * RULE_ARRAY
+        NewDarray& RULE_ARRAY
         )
     {
-    int linenums = 0;
-    int tagnums = 0;
-    FILE * lexicon;
-    FILE * rulefile;
-    FILE * bigrams;
-    FILE * wordlist;
-    Registry lexicon_hash;
-    Registry good_right_hash;
-    Registry good_left_hash;
-    Registry bigram_hash;
-    Registry wordlist_hash;
-    char line[5000];	/* input line buffer */
-    Darray rule_array;
-    char * linecopy;
-    char **perl_split_ptr;
-#if RESTRICT_MOVE
-#if WITHSEENTAGGING
-    char ** perl_split_ptr2;
-    char * atempstr;
-    char space[500];
-    Registry seentagging;
-#endif
-    /* if in restrict-move mode (described above), */
-    /* then we need to read in the lexicon file to see allowable */
-    /* taggings for seen words*/
-#if WITHWORDS
-    char word[MAXWORDLEN];
-    char tag[MAXTAGLEN];
-    Registry words;
-#endif
-#else
-    if (! START_ONLY_FLAG) 
-#endif
-        {
-        lexicon = fopen(Lexicon,"rb");
-        if(!lexicon)
-            {
-            fprintf(stderr,"Cannot open lexicon \"%s\" for reading\n",Lexicon);
-            exit(1);
-            }
-        while(fgets(line,sizeof(line),lexicon) != NULL) 
-            {
-            if (not_just_blank(line)) 
-                {
-                ++linenums;
-                line[strlen(line) - 1] = '\0';
-                tagnums += num_words(line);
-                }
-            }
-        fclose(lexicon);
+    NewRegistry& lexicon_hash{ LEXICON_HASH };
+    SV2_Set& bigram_hash{ BIGRAM_HASH };
+    SV_Set& wordlist_hash{ WORDLIST_HASH };
+    NewDarray& rule_array{ RULE_ARRAY };
+
+    lexicon_mmap = mmap_region{ Lexicon };
+    for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
+        auto strs = split<2>(line);
+        if (!strs[0].empty() && !strs[1].empty()) {
+            lexicon_hash.emplace(std::make_pair(strs[0], strs[1]));
         }
+    }
 
-#if RESTRICT_MOVE
-#if WITHSEENTAGGING
-    seentagging = *SEENTAGGING = Registry_create(Registry_strcmp,Registry_strhash);
-    Registry_size_hint(seentagging,tagnums);
-#endif
-
-#if WITHWORDS
-    words = *WORDS = Registry_create(Registry_strcmp,Registry_strhash);
-    Registry_size_hint(words,linenums);
-#endif
-#endif
-
-    lexicon_hash = *LEXICON_HASH = Registry_create(Registry_strcmp,Registry_strhash);
-    Registry_size_hint(lexicon_hash,tagnums);
-
-    lexicon = fopen(Lexicon, "rb");
-    if(!lexicon)
-        {
-        fprintf(stderr,"Cannot open lexicon \"%s\" for reading\n",Lexicon);
-        exit(1);
-        }
-    while(fgets(line,sizeof(line),lexicon) != NULL)
-    /*while(fgets(line,linelen,allowedmovefile) != NULL) */
-        {/* Bart 20030415 */
-        if (not_just_blank(line)) 
-            {
-            char *word2;
-            char *tag2;
-            line[strlen(line) - 1] = '\0';
-
-    /* lexicon hash stores the most likely tag for all known words.
-    we can have a separate wordlist and lexicon file because unsupervised
-    learning    can add to wordlist, while not adding to lexicon.  For
-    example, if a big    untagged corpus is about to be tagged, the wordlist
-    can be extended to    include words in that corpus, while the lexicon
-    remains static.    Lexicon is file of form: 
-    word t1 t2 ... tn 
-    where t1 is the most likely tag for the word, and t2...tn are alternate
-    tags, in no particular order. */
-    /* just need word and most likely tag from lexicon (first tag entry) */
-#if RESTRICT_MOVE
-#if WITHWORDS
-            sscanf(line,"%s%s",word,tag);
-            word2 = mystrdup(word);
-            tag2 = mystrdup(tag);
-            if(!Registry_add(lexicon_hash,(char *)word2,(char *)tag2))
-                {
-                free(word2);
-                free(tag2);
-                DECREMENT
-                DECREMENT
-                }
-
-#if WITHSEENTAGGING
-            perl_split_ptr = perl_split(line);
-            perl_split_ptr2 = perl_split_ptr;
-            ++perl_split_ptr;
-            atempstr= mystrdup(*perl_split_ptr2);
-            if(!Registry_add(words,atempstr,(char *)1))
-                {
-                free(atempstr);
-                DECREMENT
-                }
-            while(*perl_split_ptr != NULL) 
-                {
-                sprintf(space,"%s %s",*perl_split_ptr2,*perl_split_ptr);
-                atempstr = mystrdup(space);
-                if(!Registry_add(seentagging,atempstr,(char *)1))
-                    {
-                    free(atempstr);
-                    DECREMENT
-                    }
-                ++perl_split_ptr; 
-                }
-            free(*perl_split_ptr2);
-            free(perl_split_ptr2);
-            DECREMENT
-            DECREMENT
-#else
-            char * space = strchr(line,' ');
-            if(space)
-                {
-                *space = '\0';
-                word2 = mystrdup(line);
-                *space = ' ';
-                tag2 = mystrdup(space+1);
-                if(!Registry_add(words,word2,tag2))
-                    {
-                    free(word2);
-                    free(tag2);
-                    DECREMENT
-                    DECREMENT
-                    }
-                }
-#endif
-#else
-            char * space = strchr(line,' ');
-            if(space)
-                {
-                *space = '\0';
-                word2 = mystrdup(line);
-                *space = ' ';
-                tag2 = mystrdup(space+1);
-                if(!Registry_add(lexicon_hash,word2,tag2))
-                    {
-                    free(word2);
-                    free(tag2);
-                    DECREMENT
-                    DECREMENT
-                    }
-                }
-#endif
-#else
-            char * space = strchr(line,' ');
-            if(space)
-                {
-                *space = '\0';
-                word2 = mystrdup(line);
-                *space = ' ';
-                tag2 = mystrdup(space+1);
-                if(!Registry_add(lexicon_hash,word2,tag2))
-                    {
-                    free(word2);
-                    free(tag2);
-                    DECREMENT
-                    DECREMENT
-                    }
-                }
-#endif
-            }
-        }
     /* read in rule file */
-    rule_array = *RULE_ARRAY = Darray_create();
-    good_right_hash = Registry_create(Registry_strcmp,Registry_strhash);
-    good_left_hash = Registry_create(Registry_strcmp,Registry_strhash);
+    SV_Set good_right_hash;
+    SV_Set good_left_hash;
     
-    rulefile = fopen(Lexicalrulefile,"rb");
-    if(!rulefile)
-        {
-        fprintf(stderr,"Cannot open lexical rule file \"%s\" for reading\n",Lexicalrulefile);
-        exit(1);
-        }
-    while(fgets(line,sizeof(line),rulefile) != NULL) 
-        {
-        if (not_just_blank(line))
+    lrf_mmap = mmap_region{ Lexicalrulefile };
+    for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
+        auto perl_split_ptr = split<6>(line);
+        rule_array.emplace_back(perl_split_ptr);
+        if (perl_split_ptr[1].compare("goodright") == 0) 
             {
-            char * tempruleptr;
-            line[strlen(line) - 1] = '\0';
-            perl_split_ptr = perl_split(line);
-            Darray_addh(rule_array,perl_split_ptr);	   
-            if (strcmp(perl_split_ptr[1],"goodright") == 0) 
-                {
-                tempruleptr = mystrdup(perl_split_ptr[0]);
-                if(!Registry_add(good_right_hash,tempruleptr,(char *)1))
-                    {
-                    free(tempruleptr);
-                    DECREMENT
-                    }
-                }
-            else if (strcmp(perl_split_ptr[2],"fgoodright") == 0) 
-                {
-                tempruleptr = mystrdup(perl_split_ptr[1]);
-                if(!Registry_add(good_right_hash,tempruleptr,(char *)1))
-                    {
-                    free(tempruleptr);
-                    DECREMENT
-                    } 
-                }
-            else if (strcmp(perl_split_ptr[1],"goodleft") == 0) 
-                {
-                tempruleptr = mystrdup(perl_split_ptr[0]);
-                if(!Registry_add(good_left_hash,tempruleptr,(char *)1))
-                    {
-                    free(tempruleptr);
-                    DECREMENT
-                    } 
-                }
-            else if (strcmp(perl_split_ptr[2],"fgoodleft") == 0) 
-                {
-                tempruleptr = mystrdup(perl_split_ptr[1]);
-                if(!Registry_add(good_left_hash,tempruleptr,(char *)1))
-                    {
-                    free(tempruleptr);
-                    DECREMENT
-                    }  
-                }
+            good_right_hash.emplace(perl_split_ptr[0]);
             }
-        }
-    fclose(rulefile);
+        else if (perl_split_ptr[2].compare("fgoodright") == 0)
+            {
+            good_right_hash.emplace(perl_split_ptr[1]);
+            }
+        else if (perl_split_ptr[1].compare("goodleft") == 0)
+            {
+            good_left_hash.emplace(perl_split_ptr[0]);
+            }
+        else if (perl_split_ptr[2].compare("fgoodleft") == 0)
+            {
+            good_left_hash.emplace(perl_split_ptr[1]);
+            }
+    }
 
     /* read in bigram file */
-    bigram_hash = *BIGRAM_HASH = Registry_create(Registry_strcmp,Registry_strhash);
-    
-    bigrams = fopen(Bigrams,"rb");
-    if(!bigrams)
-        {
-        fprintf(stderr,"Cannot open bigram file \"%s\" for reading\n",Bigrams);
-        exit(1);
-        }
-    while(fgets(line,sizeof(line),bigrams) != NULL) 
-        {
-        if (strlen(line) > 1) 
+    bigram_mmap = mmap_region{ Bigrams };
+    for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
+        auto bigram = split<2>(line);
+        if (good_right_hash.count(bigram[0]))
             {
-            char bigram1[MAXWORDLEN],bigram2[MAXWORDLEN];
-            char bigram_space[MAXWORDLEN*2];
-            line[strlen(line) - 1] = '\0';
-            sscanf(line,"%s%s",bigram1,bigram2);
-            if (Registry_get(good_right_hash,bigram1)) 
-                {
-                sprintf(bigram_space,"%s %s",bigram1,bigram2);
-                linecopy = mystrdup(bigram_space);
-                if(!Registry_add(bigram_hash,linecopy,(char *)1))
-                    {
-                    free(linecopy);
-                    DECREMENT
-                    } 
-                }
-            if (Registry_get(good_left_hash,bigram2)) 
-                {
-                sprintf(bigram_space,"%s %s",bigram1,bigram2);
-                linecopy = mystrdup(bigram_space);
-                if(!Registry_add(bigram_hash,linecopy,(char *)1))
-                    {
-                    free(linecopy);
-                    DECREMENT
-                    } 
-                }
+            bigram_hash.emplace(bigram);
+            }
+        if (good_left_hash.count(bigram[1])) 
+            {
+            bigram_hash.emplace(bigram);
             }
         }
-    fclose(bigrams);
-    
-    freeRegistry(good_right_hash);
-    freeRegistry(good_left_hash);
 
     if (Wordlist) 
         {
-        int numwordentries = 0;
-        wordlist = fopen(Wordlist,"rb");
-        if(!wordlist)
-            {
-            fprintf(stderr,"Cannot open word lits \"%s\" for reading\n",Wordlist);
-            exit(1);
+        wordlist_mmap = mmap_region{ Wordlist };
+        for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
+            wordlist_hash.emplace(line);
             }
-        while(fgets(line,sizeof(line),wordlist) != NULL) 
-            {
-            if (not_just_blank(line)) 
-                ++numwordentries;
-            }
-        fclose(wordlist);
-        wordlist_hash = *WORDLIST_HASH = Registry_create(Registry_strcmp,Registry_strhash);
-        Registry_size_hint(wordlist_hash,numwordentries);
-        wordlist = fopen(Wordlist,"rb");
-        if(!wordlist)
-            {
-            fprintf(stderr,"Cannot open word lits \"%s\" for reading\n",Wordlist);
-            exit(1);
-            }
-        /* read in list of words */
-        while(fgets(line,sizeof(line),wordlist) != NULL) 
-            {
-            if (not_just_blank(line)) 
-                {
-                char *word2;
-                line[strlen(line) - 1] = '\0';
-                word2 = mystrdup(line);
-                if(!Registry_add(wordlist_hash,(char *)word2,(char *)1)) // Bart 20040203. Notice that the original source code has 'word', not 'word2' on this line. So that must be a bug!
-                    {
-                    free(word2);
-                    DECREMENT
-                    } 
-                }
-            }
-        fclose(wordlist);
         }
     return true;
     }
@@ -430,9 +233,6 @@ static void deleteRegistries(
         Registry WORDS,
 #endif
 #endif
-        Registry LEXICON_HASH,
-        Registry BIGRAM_HASH,
-        Registry WORDLIST_HASH
                              )
     {
 #if RESTRICT_MOVE
@@ -443,21 +243,14 @@ static void deleteRegistries(
     freeRegistry(WORDS);
 #endif
 #endif
-    freeRegistry(LEXICON_HASH);
-    freeRegistry(BIGRAM_HASH);
-    freeRegistry(WORDLIST_HASH);
     }
 
 tagger::tagger()
     {
-    Lexicon = NULL;
-    Bigrams = NULL;
-    Lexicalrulefile = NULL;
     Contextualrulefile = NULL;
     corpussize = 0;
     linenums = 0;
     tagnums = 0;
-    wdlistname = NULL; 
 #if RESTRICT_MOVE
 #if WITHSEENTAGGING
     SEENTAGGING = NULL;
@@ -466,10 +259,10 @@ tagger::tagger()
     WORDS = NULL;
 #endif
 #endif
-    LEXICON_HASH = NULL;
-    BIGRAM_HASH = NULL;
-    WORDLIST_HASH = NULL;
-    RULE_ARRAY = NULL;
+    LEXICON_HASH.clear();
+    BIGRAM_HASH.clear();
+    WORDLIST_HASH.clear();
+    RULE_ARRAY.clear();
     }
 
 bool tagger::init(
@@ -477,23 +270,19 @@ bool tagger::init(
                 const char * _Bigrams,
                 const char * _Lexicalrulefile,
                 const char * _Contextualrulefile,
-                char * _wdlistname,
+                const char * _wdlistname,
                 bool _START_ONLY_FLAG,
                 bool _FINAL_ONLY_FLAG
                 )
     {
-    Lexicon = _Lexicon;
-    Bigrams = _Bigrams;
-    Lexicalrulefile = _Lexicalrulefile;
     Contextualrulefile = _Contextualrulefile;
     START_ONLY_FLAG = _START_ONLY_FLAG;
     FINAL_ONLY_FLAG = _FINAL_ONLY_FLAG;
-    wdlistname = _wdlistname;
     if (  (  START_ONLY_FLAG 
           && FINAL_ONLY_FLAG
           ) 
        || (  FINAL_ONLY_FLAG 
-          && wdlistname
+          && _wdlistname
           ) 
        ) 
         {
@@ -512,26 +301,22 @@ bool tagger::init(
         &WORDS,
 #endif
 #endif
-        &LEXICON_HASH,
-        &BIGRAM_HASH,
-        &WORDLIST_HASH,
-        Lexicon,
-        Lexicalrulefile,
-        Bigrams,
-        wdlistname,
+        LEXICON_HASH,
+        BIGRAM_HASH,
+        WORDLIST_HASH,
+        _Lexicon,
+        _Lexicalrulefile,
+        _Bigrams,
+        _wdlistname,
 #if !RESTRICT_MOVE
         START_ONLY_FLAG,
 #endif
-        &RULE_ARRAY
+        RULE_ARRAY
         );
     }
 
 
-#if STREAM
-bool tagger::analyse(istream & CORPUS,ostream & fpout,optionStruct * Options)
-#else
-bool tagger::analyse(FILE * CORPUS,FILE * fpout,optionStruct * Options)
-#endif
+bool tagger::analyse(std::istream & CORPUS,std::ostream & fpout,optionStruct * Options)
     {
     text * Text = NULL;
     if(Options->XML)
@@ -564,7 +349,6 @@ bool tagger::analyse(FILE * CORPUS,FILE * fpout,optionStruct * Options)
              BIGRAM_HASH,
              RULE_ARRAY,
              WORDLIST_HASH,
-             wdlistname,
              Options,
              tag_hash
              );
@@ -594,29 +378,3 @@ bool tagger::analyse(FILE * CORPUS,FILE * fpout,optionStruct * Options)
     delete Text;
     return true;
     }
-
-tagger::~tagger()
-    {
-    for (unsigned int i = 0;i < Darray_len(RULE_ARRAY);++i) 
-        {
-        char ** tempstr = (char **)Darray_get(RULE_ARRAY,i);
-        free(*tempstr);
-        free(tempstr);
-        DECREMENT
-        DECREMENT
-        }
-    Darray_destroy(RULE_ARRAY);
-    deleteRegistries(
-#if RESTRICT_MOVE
-#if WITHSEENTAGGING
-        SEENTAGGING,
-#endif
-#if WITHWORDS
-        WORDS,
-#endif
-#endif
-        LEXICON_HASH,BIGRAM_HASH,WORDLIST_HASH);
-    }
-
-
-

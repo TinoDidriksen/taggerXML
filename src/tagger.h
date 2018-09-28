@@ -3,14 +3,7 @@
 
 #include "option.h"
 #include "defines.h"
-#if STREAM
-# include <iostream>
-# ifndef __BORLANDC__
-using namespace std;
-# endif
-#else
-#include <stdio.h>
-#endif
+#include <iostream>
 #include <malloc.h>
 
 /*
@@ -38,16 +31,11 @@ class tagger
                 const char * Lexicalrulefile,
                 const char * Contextualrulefile,
                 //char *intermed,
-                char * wdlistname,
+                const char * wdlistname,
                 bool START_ONLY_FLAG,
                 bool FINAL_ONLY_FLAG
                 );
-        ~tagger();
-#if STREAM
-        bool analyse(istream & CORPUS,/*ostream * fintermed,*/ostream & fpout,optionStruct * Options);
-#else
-        bool analyse(FILE * CORPUS,/*FILE * fintermed,*/FILE * fpout,optionStruct * Options);
-#endif
+        bool analyse(std::istream & CORPUS,/*std::ostream * fintermed,*/std::ostream & fpout,optionStruct * Options);
     };
 
 

@@ -1,6 +1,8 @@
 #ifndef SUBSTRING_H
 #define SUBSTRING_H
 
+#include "sysdep.h"
+
 class substring
     {
     private:

@@ -39,9 +39,7 @@ field::field():next(NULL)
     ++COUNT;
 #endif
     }
-#ifndef CONSTSTRCHR
-const 
-#endif
+
 char * field::getString(){return NULL;}
 
 char * readValue::read(char * kar,field *& nextfield)

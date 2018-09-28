@@ -69,11 +69,7 @@ class XMLtext : public text
         void CallBackEmptyTag();
         void CallBackNoMoreAttributes();
         XMLtext(
-#if STREAM
-            istream & fpi
-#else
-            FILE * fpi
-#endif
+            std::istream & fpi
            ,const char * Iformat
 //           ,bool nice
 //           ,unsigned long int size
@@ -86,13 +82,7 @@ class XMLtext : public text
            ,const char * POSAttribute // Store POS in POSAttribute
             );
         ~XMLtext(){}
-        virtual void printUnsorted(
-#if STREAM
-            ostream & fpo
-#else
-            FILE * fpo            
-#endif
-            );
+        virtual void printUnsorted(std::ostream & fpo);
     };
 
 #endif

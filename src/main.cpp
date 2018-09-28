@@ -10,28 +10,7 @@ Version 3: handling of XML (Previously called version 1, because Brill had not d
 #include "useful.h" // dupl
 #include "tagger.h"
 #include "option.h"
-#if STREAM
-# include <fstream>
-# if defined __BORLANDC__
-#  include <strstrea.h>
-# else
-#  ifdef __GNUG__
-#   if __GNUG__ > 2
-#    include <sstream>
-#   else
-#    include <strstream.h>
-#   endif
-#  else
-#   include <sstream>
-#  endif
-# endif
-# ifndef __BORLANDC__
-using namespace std;
-# endif
-#else
-#include <stdio.h>
-#include <stdlib.h>
-#endif
+#include <fstream>
 
 #if defined __MSDOS__ || defined _WIN32			//if PC version
 #else
@@ -161,28 +140,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
-#if STREAM
-    ifstream corpus(Option.Corpus,ios::binary);
-    corpus.unsetf(ios::skipws); // do not skip white space
-    theTagger.analyse(corpus,cout,&Option);
-#else
-    FILE * out = stdout;
-    FILE * corpus = fopen(Option.Corpus,"rb");
-    if(!corpus)
-        {
-        fprintf(stderr,"Cannot open file %s for reading\n",Option.Corpus);
-        return 1;
-        }
-    theTagger.analyse(corpus,out,&Option);
-#endif
+    std::ifstream corpus(Option.Corpus,std::ios::binary);
+    corpus.unsetf(std::ios::skipws); // do not skip white space
+    theTagger.analyse(corpus,std::cout,&Option);
     
-#if STREAM
-#else
-    if(out != stdout)
-        fclose(out);
-    fclose(corpus);
-#endif
-
 #if TIMING
     printf("%ld/%ld",(long int)clock() - (long int)time0,(long int)CLOCKS_PER_SEC);
 #endif

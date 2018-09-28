@@ -6,62 +6,55 @@
 #include "registry.h"
 #include "defines.h"
 #include <assert.h>
-#include <string.h>
+#include <string>
+#include <string_view>
 
 class strng
     {
     private:
-        char * Key;
-        char * Val;
+        std::string Key;
+        std::string Val;
     public:
         strng(const char * key,const char * val)
             {
             assert(key != 0);
-            Key = new char[strlen(key)+1];
-            strcpy(Key,key);
+            Key.assign(key);
             if(val)
                 {
-                Val = new char[strlen(val)+1];
-                strcpy(Val,val);
+                Val.assign(val);
                 }
-            else
-                Val = 0;
-            }
-        ~strng()
-            {
-            delete [] Key;
-            delete [] Val;
             }
         const char * key() const
             {
-            return Key;
+            return Key.c_str();
             }
-        char * val() const
+        const char * val() const
             {
-            return Val;
+            return Val.c_str();
             }
         void setVal(const char * val)
+        {
+            Val.clear();
+            if (val)
             {
-            if(val)
-                {
-                Val = new char[strlen(val)+1];
-                strcpy(Val,val);
-                }
-            else
-                delete [] Val;
+                Val.assign(val);
             }
-    };
+        }
+        void setVal(std::string_view val)
+        {
+            Val.assign(val);
+        }
+};
 
 struct optionStruct;
 
 int start_state_tagger
         (
-        Registry lexicon_hash,
+        NewRegistry& lexicon_hash,
         corpus * Corpus,
-        Registry bigram_hash,
-        Darray rule_array,
-        Registry wordlist_hash,
-        const char * Wordlist,
+        SV2_Set& bigram_hash,
+        NewDarray& rule_array,
+        SV_Set& wordlist_hash,
         optionStruct * Options,
         hashmap::hash<strng> * tag_hash
         );

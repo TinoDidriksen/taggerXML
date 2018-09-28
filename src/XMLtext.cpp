@@ -30,20 +30,13 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string_view>
 
-
-static void printXML(
-#if STREAM
-                     ostream & fpo
-#else
-                     FILE * fpo
-#endif
-                     ,const char * s)
+static void printXML(std::ostream & fpo, std::string_view s)
     {
-#if STREAM
-    while(*s)
+    while(!s.empty())
         {
-        switch(*s)
+        switch(s.front())
             {
             case '<':
                 fpo << "&lt;";
@@ -52,7 +45,7 @@ static void printXML(
                 fpo << "&gt;";
                 break;
             case '&':
-                if(strchr(s+1,';'))
+                if (s.find(';', 1) != std::string_view::npos)
                     fpo << '&';
                 else
                     fpo << "&amp;";
@@ -64,39 +57,10 @@ static void printXML(
                 fpo << "&quot;";
                 break;
             default:
-                fpo << *s;
+                fpo << s.front();
             }
-        ++s;
+        s.remove_prefix(1);
         }
-#else
-    while(*s)
-        {
-        switch(*s)
-            {
-            case '<':
-                fprintf(fpo,"&lt;");
-                break;
-            case '>':
-                fprintf(fpo,"&gt;");
-                break;
-            case '&':
-                if(strchr(s+1,';'))
-                    fputc('&',fpo);
-                else
-                    fprintf(fpo,"&amp;");
-                break;
-            case '\'':
-                fprintf(fpo,"&apos;");
-                break;
-            case '"':
-                fprintf(fpo,"&quot;");
-                break;
-            default:
-                fputc(*s,fpo);
-            }
-        ++s;
-        }
-#endif
     }
 
 
@@ -470,9 +434,7 @@ class wordReader
                 nextfield->read(kars,nextfield);
                 }
             }
-#ifndef CONSTSTRCHR
-        const 
-#endif
+
         char * readChar(int kar)
             {
             if(!nextfield)
@@ -496,14 +458,10 @@ class wordReader
                 return wordfield->getString();
                 }
             }
-#ifndef CONSTSTRCHR
-        const 
-#endif
+
         char * count(int kar)
             {
-#ifndef CONSTSTRCHR
-            const 
-#endif
+
             char * w = readChar(kar);
             if(Text->analyseThis())
                 {
@@ -514,14 +472,10 @@ class wordReader
                 }
             return w;
             }
-#ifndef CONSTSTRCHR
-        const 
-#endif
+
         char * read(int kar)
             {
-#ifndef CONSTSTRCHR
-            const 
-#endif
+
             char * w = readChar(kar);
             if(Text->analyseThis())
                 {
@@ -540,8 +494,6 @@ class wordReader
                         Tok->Pos = Tok->PreTag = new char[strlen(pretag)+1];
                         strcpy(Tok->PreTag,pretag);
                         *EP = savP;
-                        char temp[100];
-                        sprintf(temp,"[%s]",Tok->Pos);
                         }
                     Text->CurrToken = NULL;
                     }
@@ -550,13 +502,7 @@ class wordReader
             }
     };
 
-void XMLtext::printUnsorted(
-#if STREAM
-                            ostream & fpo
-#else
-                            FILE * fpo            
-#endif
-                            )
+void XMLtext::printUnsorted(std::ostream & fpo)
     {
     if(this->alltext)
         {
@@ -568,9 +514,11 @@ void XMLtext::printUnsorted(
             const char * end = Token[k].WordGetEnd();
             const char * POSstart = Token[k].POSGetStart();
             const char * POSend = Token[k].POSGetEnd();
-            char * p = strchr(Token[k].Pos,' ');
-            if(p)
-                *p = 0;
+
+            auto p = Token[k].Pos;
+            if (p.find(' ') != std::string_view::npos) {
+                p = p.substr(0, p.find(' '));
+            }
             if(POSstart == NULL)
                 { // write word together with POS-tag
                 if(start)
@@ -587,8 +535,6 @@ void XMLtext::printUnsorted(
                 o = POSend;
                 printXML(fpo,Token[k].Pos);
                 }
-            if(p)
-                *p = ' ';
             }
         o = copy(fpo,o,o+strlen(o));
         }
@@ -647,11 +593,7 @@ void CallBackEmptyTag(void * arg)
     }
 
 XMLtext::XMLtext(
-#if STREAM
-            istream & fpi
-#else
-            FILE * fpi
-#endif
+            std::istream & fpi
            ,const char * Iformat
            ,bool XML
            ,const char * ancestor // restrict POS-tagging to segments that fit in ancestor elements
@@ -686,10 +628,9 @@ XMLtext::XMLtext(
     
     if(XML && Iformat)
         {
-#if STREAM
-        fpi.seekg(0,ios::end);
-        long filesize = fpi.tellg();
-        fpi.seekg(0,ios::beg);
+        fpi.seekg(0, std::ios::end);
+        long filesize = static_cast<long>(fpi.tellg());
+        fpi.seekg(0, std::ios::beg);
         if(filesize > 0)
             {
             alltext = new char[filesize+1];
@@ -702,26 +643,8 @@ XMLtext::XMLtext(
                 *p++ = kar;
                 }
             *p = '\0';
-            fpi.seekg(0,ios::beg);
+            fpi.seekg(0, std::ios::beg);
             }
-#else
-        int kar;
-        fseek(fpi,0,SEEK_END);
-        long filesize = ftell(fpi);
-        ::rewind(fpi);
-        if(filesize > 0)
-            {
-            alltext = new char[filesize+1];
-            char * p = alltext;
-            while((kar = getc(fpi)) != EOF)
-                {
-                *p++ = (char)kar;
-                assert(p - alltext < filesize+1);
-                }
-            *p = '\0';
-            ::rewind(fpi);
-            }
-#endif
         }
     if(alltext)
         {
@@ -759,9 +682,7 @@ XMLtext::XMLtext(
         char * curr_pos = alltext;
         char * endpos = alltext;
         estate Seq = notag;
-#ifndef CONSTSTRCHR
-        const 
-#endif
+
         char * (wordReader::*fnc)(int kar);
         int loop;
         fnc = &wordReader::count;

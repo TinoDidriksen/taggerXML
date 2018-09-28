@@ -3,26 +3,15 @@
 
 #include "defines.h"
 #include "substring.h"
+#include <string_view>
 
 #define ESCAPESLASH 0
 
 
-#if STREAM
-# include <iostream>
-# ifndef __BORLANDC__
-using namespace std;
-# endif
-#else
-# include <stdio.h>
-#endif
+#include <iostream>
 
 
-const char * 
-#if STREAM
-copy(ostream & fp,const char * o,const char * end);
-#else
-copy(FILE * fp,const char * o,const char * end);
-#endif
+const char * copy(std::ostream & fp,const char * o,const char * end);
 
 class strng;
 class text;
@@ -36,7 +25,7 @@ class token
     public:
         strng * wordPrePos;
         char * PreTag; // does own. Tag(s) from input
-        char * Pos; // does not own. Generated tags. Part of rule text.
+        std::string_view Pos; // does not own. Generated tags. Part of rule text.
         bool firstOfLine:1;
         bool lastOfLine:1;
 
@@ -236,20 +225,10 @@ class text: public corpus
             total += inc;
             }
         text();
-#if STREAM
-        text(istream & fpi,bool FINAL_ONLY_FLAG);
-#else
-        text(FILE * fpi,bool FINAL_ONLY_FLAG);
-#endif
+        text(std::istream & fpi,bool FINAL_ONLY_FLAG);
         virtual ~text();
         strng * insert(const char * w);
-        virtual void printUnsorted(
-#if STREAM
-            ostream & fpo
-#else
-            FILE * fpo            
-#endif
-            );
+        virtual void printUnsorted(std::ostream & fpo);
     };
 
 #endif

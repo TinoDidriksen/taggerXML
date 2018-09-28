@@ -59,11 +59,7 @@ class field
                 next = fld;
             }
         virtual void add(char /*kar*/){}
-        virtual 
-#ifndef CONSTSTRCHR
-            const 
-#endif
-            char * getString();
+        virtual char * getString();
         virtual void reset(){if(next)next->reset();}
     };
 
@@ -94,10 +90,8 @@ class readValue : public field
             pos = 0;
             field::reset();
             }
-#ifndef CONSTSTRCHR
-        const 
-#endif
-            char * getString()
+
+        char * getString()
             {
             if(pos == 0)
                 return _empty;

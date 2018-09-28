@@ -29,9 +29,10 @@ PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.   */
 #include <ctype.h>
 #include <locale.h>
 
-
-
-
+inline int svtoi(std::string_view& str) {
+    int rv = atoi(&str.front());
+    return rv;
+}
 
 int CheckLineForCapitalizedWordsOrNonAlphabeticStuff(corpus * Corpus)
     {
@@ -48,12 +49,11 @@ int CheckLineForCapitalizedWordsOrNonAlphabeticStuff(corpus * Corpus)
 
 int start_state_tagger
         (
-        Registry lexicon_hash,
+        NewRegistry& lexicon_hash,
         corpus * Corpus,
-        Registry bigram_hash,
-        Darray rule_array,
-        Registry wordlist_hash,
-        const char * Wordlist,
+        SV2_Set& bigram_hash,
+        NewDarray& rule_array,
+        SV_Set& wordlist_hash,
         optionStruct * Options,
         hashmap::hash<strng> * tag_hash
         )
@@ -62,14 +62,12 @@ int start_state_tagger
     hashmap::hash<strng> * ntot_hash; // for words (types) that are not in the lexicon.
 //    hashmap::hash<strng> * tag_hash;
     strng ** tag_array;
-    char *tempstr,*tempstr2;
-    char **therule,**therule2;
+    char *tempstr2;
     char noun[20] = {'\0'},proper[20] = {'\0'};
-    int rulesize,tempcount;
+    int tempcount;
     unsigned int count,count2,count3;
-    char
-        tempstr_space[MAXWORDLEN+MAXAFFIXLEN],bigram_space[MAXWORDLEN*2];
-    int EXTRAWDS= 0;
+    char tempstr_space[MAXWORDLEN+MAXAFFIXLEN];
+    bool EXTRAWDS = !wordlist_hash.empty();
     long ConvertToLowerCaseIfFirstWord = option("ConvertToLowerCaseIfFirstWord");
     if(ConvertToLowerCaseIfFirstWord == -1)
         {
@@ -124,11 +122,6 @@ int start_state_tagger
         for tagging unknown words in the "add prefix/suffix" and
     "delete prefix/suffix" rules.  This contains words not in LEXICON. */
     
-    if (Wordlist) 
-        {
-        EXTRAWDS=1;
-        }
-    
     /*********************************************************/
     /* Read in Corpus to be tagged.  Actually, just record word list, */
     /* since each word will get the same tag, regardless of context. */
@@ -152,13 +145,13 @@ int start_state_tagger
             const char * wrd;
             while ((wrd = Corpus->getWord()) != NULL) 
                 { 
-                if(  Registry_get(lexicon_hash,wrd) == NULL
+                if(  lexicon_hash.count(wrd) == 0
                   && (  (  heading 
-                        && (Registry_get(lexicon_hash,allToLowerUTF8(wrd)) == NULL)
+                        && (lexicon_hash.count(allToLowerUTF8(wrd)) == 0)
                         )
                      || !startOfLine
                      || ConvertToLowerCaseIfFirstWord != 1
-                     || Registry_get(lexicon_hash,allToLowerUTF8(wrd)) == NULL
+                     || lexicon_hash.count(allToLowerUTF8(wrd)) == 0
                      )
                   ) 
                     {
@@ -231,68 +224,65 @@ int start_state_tagger
 
     // Analyse the Out Of Vocabulary words with the lexical rules.
 
-    unsigned int maxcount = Darray_len(rule_array);
     size_t notokens = length;
-    for (count= 0;count < maxcount;++count) 
+    for (size_t count= 0;count < rule_array.size();++count)
         {
-        therule = (char **)Darray_get(rule_array,count);
+        auto& therule = rule_array[count];
         if(Verbose)
             fprintf(stderr,"s");
             /* we don't worry about freeing "rule" space, as this is a small fraction
             of total memory used */
-        therule2 = &therule[1];
-        rulesize= 0;
-        char **perl_split_ptr;
-        perl_split_ptr = therule;
-        while(*(++perl_split_ptr) != NULL) 
-            {
-            ++rulesize;
+        size_t rulesize = 0;
+        for (auto& s : therule) {
+            if (!s.empty()) {
+                ++rulesize;
             }
+        }
         
-        if (strcmp(therule[1],"char") == 0) 
+        if (therule[1].compare("char") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) != 0) 
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) != 0)
                     {
-                    if(strpbrk(tag_array[count2]->key(), therule[0]) != NULL) 
+                    if(therule[0].find_first_of(tag_array[count2]->key()) != std::string_view::npos)
                         {
                         tag_array[count2]->setVal(therule[rulesize-1]);
                         }
                     }
                 }
             }
-        else if (strcmp(therule2[1],"fchar") == 0) 
+        else if (therule[2].compare("fchar") == 0) 
             { 
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[0]) == 0) 
+                if (therule[0].compare(tag_array[count2]->val()) == 0)
                     {
-                    if(strpbrk(tag_array[count2]->key(), therule2[0]) != NULL) 
+                    if(therule[1].find_first_of(tag_array[count2]->key()) != std::string_view::npos)
                         {
                         tag_array[count2]->setVal(therule[rulesize-1]);
                         }
                     }
                 }
             }
-        else if (strcmp(therule[1],"deletepref") == 0) 
+        else if (therule[1].compare("deletepref") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) != 0) 
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) != 0)
                     {
                     const char * tempstr = tag_array[count2]->key();
-                    for (count3 = 0;(int)count3 < atoi(therule[2]);++count3) 
+                    for (count3 = 0;(int)count3 < svtoi(therule[2]);++count3) 
                         {
                         if (tempstr[count3] != therule[0][count3])
                             break;
                         }
-                    if ((int)count3 == atoi(therule[2])) 
+                    if ((int)count3 == svtoi(therule[2])) 
                         {
-                        tempstr += atoi(therule[2]);
-                        if (  Registry_get(lexicon_hash,(char *)tempstr) != NULL 
+                        tempstr += svtoi(therule[2]);
+                        if (lexicon_hash.count((char *)tempstr)
                            || (  EXTRAWDS 
-                              && Registry_get(wordlist_hash,(char *)tempstr) != NULL
+                              && lexicon_hash.count((char *)tempstr)
                               )
                            )
                             {
@@ -303,26 +293,26 @@ int start_state_tagger
                 }
             }
         
-        else if (strcmp(therule2[1],"fdeletepref") == 0) 
+        else if (therule[2].compare("fdeletepref") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[0]) == 0)
+                if (therule[0].compare(tag_array[count2]->val()) == 0)
                     { 
                     const char * tempstr=tag_array[count2]->key();
-                    for (count3 = 0;(int)count3 < atoi(therule2[2]);++count3) 
+                    for (count3 = 0;(int)count3 < svtoi(therule[3]);++count3) 
                         {
-                        if (tempstr[count3] != therule2[0][count3])
+                        if (tempstr[count3] != therule[1][count3])
                             {
                             break;
                             }
                         }
-                    if ((int)count3 == atoi(therule2[2])) 
+                    if ((int)count3 == svtoi(therule[3])) 
                         {
-                        tempstr += atoi(therule2[2]);
-                        if (  Registry_get(lexicon_hash,(char *)tempstr) != NULL 
+                        tempstr += svtoi(therule[3]);
+                        if (lexicon_hash.count((char *)tempstr)
                            || (  EXTRAWDS 
-                              && Registry_get(wordlist_hash,(char *)tempstr) != NULL
+                              && lexicon_hash.count((char *)tempstr)
                               )
                            )
                             {
@@ -334,21 +324,21 @@ int start_state_tagger
             }
         
         
-        else if (strcmp(therule[1],"haspref") == 0) 
+        else if (therule[1].compare("haspref") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) != 0) 
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) != 0)
                     {
                     const char * tempstr = tag_array[count2]->key();
-                    for (count3 = 0;(int)count3 < atoi(therule[2]);++count3) 
+                    for (count3 = 0;(int)count3 < svtoi(therule[2]);++count3) 
                         {
                         if (tempstr[count3] != therule[0][count3])
                             {
                             break;
                             }
                         }
-                    if ((int)count3 == atoi(therule[2])) 
+                    if ((int)count3 == svtoi(therule[2])) 
                         {
                         tag_array[count2]->setVal(therule[rulesize-1]);
                         }
@@ -356,21 +346,21 @@ int start_state_tagger
                 }
             }
         
-        else if (strcmp(therule2[1],"fhaspref") == 0) 
+        else if (therule[2].compare("fhaspref") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[0]) == 0)
+                if (therule[0].compare(tag_array[count2]->val()) == 0)
                     { 
                     const char * tempstr=tag_array[count2]->key();
-                    for (count3 = 0;(int)count3 < atoi(therule2[2]);++count3) 
+                    for (count3 = 0;(int)count3 < svtoi(therule[3]);++count3) 
                         {
-                        if (tempstr[count3] != therule2[0][count3])
+                        if (tempstr[count3] != therule[1][count3])
                             {
                             break;
                             }
                         }
-                    if ((int)count3 == atoi(therule2[2])) 
+                    if ((int)count3 == svtoi(therule[3])) 
                         {
                         tag_array[count2]->setVal(therule[rulesize-1]);
                         }
@@ -379,14 +369,14 @@ int start_state_tagger
             }
         
         
-        else if (strcmp(therule[1],"deletesuf") == 0) 
+        else if (therule[1].compare("deletesuf") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) != 0) 
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) != 0)
                     {
                     const char * tempstr = tag_array[count2]->key();
-                    tempcount=strlen(tempstr) - atoi(therule[2]);
+                    tempcount=strlen(tempstr) - svtoi(therule[2]);
                     for (count3 = tempcount;count3 < strlen(tempstr); ++count3) 
                         {
                         if (tempstr[count3] != therule[0][count3-tempcount])
@@ -398,9 +388,9 @@ int start_state_tagger
                         {
                         tempstr2 = mystrdup(tempstr);
                         tempstr2[tempcount] = '\0';
-                        if (  Registry_get(lexicon_hash,(char *)tempstr2) != NULL 
+                        if (lexicon_hash.count((char *)tempstr2)
                            || (  EXTRAWDS 
-                              && Registry_get(wordlist_hash,(char *)tempstr2) != NULL
+                              && lexicon_hash.count((char *)tempstr2)
                               )
                            ) 
                             {
@@ -413,17 +403,17 @@ int start_state_tagger
                 }
             }
         
-        else if (strcmp(therule2[1],"fdeletesuf") == 0) 
+        else if (therule[2].compare("fdeletesuf") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[0]) == 0)
+                if (therule[0].compare(tag_array[count2]->val()) == 0)
                     { 
                     const char * tempstr=tag_array[count2]->key();
-                    tempcount=strlen(tempstr) - atoi(therule2[2]);
+                    tempcount=strlen(tempstr) - svtoi(therule[3]);
                     for (count3 = tempcount;count3 < strlen(tempstr); ++count3) 
                         {
-                        if (tempstr[count3] != therule2[0][count3-tempcount])
+                        if (tempstr[count3] != therule[1][count3-tempcount])
                             {
                             break;
                             }
@@ -432,9 +422,9 @@ int start_state_tagger
                         {
                         tempstr2 = mystrdup(tempstr);
                         tempstr2[tempcount] = '\0';
-                        if (  Registry_get(lexicon_hash,(char *)tempstr2) != NULL
+                        if (lexicon_hash.count((char *)tempstr2)
                            || (  EXTRAWDS 
-                              && Registry_get(wordlist_hash,(char *)tempstr2) != NULL
+                              && lexicon_hash.count((char *)tempstr2)
                               )
                            ) 
                             {
@@ -446,14 +436,14 @@ int start_state_tagger
                     }
                 }
             }
-        else if (strcmp(therule[1],"hassuf") == 0) 
+        else if (therule[1].compare("hassuf") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) != 0) 
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) != 0)
                     {
                     const char * tempstr = tag_array[count2]->key();
-                    tempcount=strlen(tempstr) - atoi(therule[2]);
+                    tempcount=strlen(tempstr) - svtoi(therule[2]);
                     for (count3 = tempcount;count3 < strlen(tempstr); ++count3) 
                         {
                         if (tempstr[count3] != therule[0][count3-tempcount])
@@ -469,17 +459,17 @@ int start_state_tagger
                 }
             }
         
-        else if (strcmp(therule2[1],"fhassuf") == 0) 
+        else if (therule[2].compare("fhassuf") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[0]) == 0)
+                if (therule[0].compare(tag_array[count2]->val()) == 0)
                     { 
                     const char * tempstr = tag_array[count2]->key();
-                    tempcount = strlen(tempstr) - atoi(therule2[2]);
+                    tempcount = strlen(tempstr) - svtoi(therule[3]);
                     for (count3 = tempcount;count3 < strlen(tempstr); ++count3) 
                         {
-                        if (tempstr[count3] != therule2[0][count3-tempcount])
+                        if (tempstr[count3] != therule[1][count3-tempcount])
                             {
                             break;
                             }
@@ -492,16 +482,18 @@ int start_state_tagger
                 }
             }
         
-        else if (strcmp(therule[1],"addpref") == 0) 
+        else if (therule[1].compare("addpref") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) == 0)
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) == 0)
                     {
-                    sprintf(tempstr_space,"%s%s",therule[0],tag_array[count2]->key());
-                    if (  Registry_get(lexicon_hash,(char *)tempstr_space) != NULL
+                    tempstr_space[0] = 0;
+                    strncat(tempstr_space, &therule[0].front(), therule[0].size());
+                    strcat(tempstr_space, tag_array[count2]->key());
+                    if (lexicon_hash.count((char *)tempstr_space)
                        || (  EXTRAWDS 
-                          && Registry_get(wordlist_hash,(char *)tempstr_space) != NULL
+                          && wordlist_hash.count((char *)tempstr_space)
                           )
                        ) 
                         {
@@ -511,16 +503,18 @@ int start_state_tagger
                 }
             }
         
-        else if (strcmp(therule2[1],"faddpref") == 0) 
+        else if (therule[2].compare("faddpref") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) == 0)
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) == 0)
                     {
-                    sprintf(tempstr_space,"%s%s",therule2[0],tag_array[count2]->key());
-                    if (  Registry_get(lexicon_hash,(char *)tempstr_space) != NULL
+                    tempstr_space[0] = 0;
+                    strncat(tempstr_space, &therule[1].front(), therule[1].size());
+                    strcat(tempstr_space, tag_array[count2]->key());
+                    if (lexicon_hash.count((char *)tempstr_space)
                        || (  EXTRAWDS 
-                          && Registry_get(wordlist_hash,(char *)tempstr_space) != NULL
+                          && wordlist_hash.count((char *)tempstr_space)
                           )
                        ) 
                         {
@@ -531,18 +525,18 @@ int start_state_tagger
             }
         
         
-        else if (strcmp(therule[1],"addsuf") == 0) 
+        else if (therule[1].compare("addsuf") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) != 0) 
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) != 0)
                     {
-                    const char * A = tag_array[count2]->key();
-                    char * B = therule[0];
-                    sprintf(tempstr_space,"%s%s", A,B);
-                    if (  Registry_get(lexicon_hash,(char *)tempstr_space) != NULL
+                    tempstr_space[0] = 0;
+                    strcat(tempstr_space, tag_array[count2]->key());
+                    strncat(tempstr_space, &therule[0].front(), therule[0].size());
+                    if (lexicon_hash.count((char *)tempstr_space)
                        || (  EXTRAWDS 
-                          && Registry_get(wordlist_hash,(char *)tempstr_space) != NULL
+                          && wordlist_hash.count((char *)tempstr_space)
                           )
                        )
                         {
@@ -553,16 +547,18 @@ int start_state_tagger
             }
         
         
-        else if (strcmp(therule2[1],"faddsuf") == 0) 
+        else if (therule[2].compare("faddsuf") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[0]) == 0) 
+                if (therule[0].compare(tag_array[count2]->val()) == 0)
                     {
-                    sprintf(tempstr_space,"%s%s", tag_array[count2]->key(), therule2[0]);
-                    if (  Registry_get(lexicon_hash,(char *)tempstr_space) != NULL
+                    tempstr_space[0] = 0;
+                    strcat(tempstr_space, tag_array[count2]->key());
+                    strncat(tempstr_space, &therule[1].front(), therule[1].size());
+                    if (lexicon_hash.count((char *)tempstr_space)
                        || (  EXTRAWDS 
-                          && Registry_get(wordlist_hash,(char *)tempstr_space) != NULL
+                          && wordlist_hash.count((char *)tempstr_space)
                           )
                        )
                         {
@@ -573,14 +569,14 @@ int start_state_tagger
             }
         
         
-        else if (strcmp(therule[1],"goodleft") == 0) 
+        else if (therule[1].compare("goodleft") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) != 0) 
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) != 0)
                     {
-                    sprintf(bigram_space,"%s %s", tag_array[count2]->key(),therule[0]);
-                    if (Registry_get(bigram_hash,(char *)bigram_space) != NULL) 
+                    auto bigram = SV2{ tag_array[count2]->key(),therule[0] };
+                    if (bigram_hash.count(bigram))
                         {
                         tag_array[count2]->setVal(therule[rulesize-1]);
                         }
@@ -588,45 +584,45 @@ int start_state_tagger
                 }
             }
         
-        else if (strcmp(therule2[1],"fgoodleft") == 0) 
+        else if (therule[2].compare("fgoodleft") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[0]) == 0) 
+                if (therule[0].compare(tag_array[count2]->val()) == 0)
                     {
-                    sprintf(bigram_space,"%s %s",tag_array[count2]->key(),therule2[0]);
-                    if (Registry_get(bigram_hash,(char *)bigram_space) != NULL) 
-                        {
+                    auto bigram = SV2{ tag_array[count2]->key(),therule[1] };
+                    if (bigram_hash.count(bigram))
+                    {
                         tag_array[count2]->setVal(therule[rulesize-1]);
                         }
                     }
                 }
             }
         
-        else if (strcmp(therule[1],"goodright") == 0) 
+        else if (therule[1].compare("goodright") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[rulesize-1]) != 0) 
+                if (therule[rulesize - 1].compare(tag_array[count2]->val()) != 0)
                     {
-                    sprintf(bigram_space,"%s %s",therule[0],tag_array[count2]->key());
-                    if (Registry_get(bigram_hash,(char *)bigram_space) != NULL) 
-                        {
+                    auto bigram = SV2{ therule[0],tag_array[count2]->key() };
+                    if (bigram_hash.count(bigram))
+                    {
                         tag_array[count2]->setVal(therule[rulesize-1]);
                         }
                     }
                 }
             }
         
-        else if (strcmp(therule2[1],"fgoodright") == 0) 
+        else if (therule[2].compare("fgoodright") == 0) 
             {
             for (count2 = 0;count2 < notokens;++count2) 
                 {
-                if (strcmp(tag_array[count2]->val(),therule[0]) == 0) 
+                if (therule[0].compare(tag_array[count2]->val()) == 0)
                     {
-                    sprintf(bigram_space,"%s %s",therule2[0],tag_array[count2]->key());
-                    if (Registry_get(bigram_hash,(char *)bigram_space) != NULL) 
-                        {
+                    auto bigram = SV2{ therule[1],tag_array[count2]->key() };
+                    if (bigram_hash.count(bigram))
+                    {
                         tag_array[count2]->setVal(therule[rulesize-1]);
                         }
                     }
@@ -646,8 +642,8 @@ int start_state_tagger
 //    tag_hash = new hashmap::hash<strng>(&strng::key,1000);
     for (count= 0;count < length;++count) 
         {
-        const char * name = tag_array[count]->key();
-        char * val = tag_array[count]->val();
+        auto name = tag_array[count]->key();
+        auto val = tag_array[count]->val();
         void * bucket;
         if(!tag_hash->find(name,bucket))
             {
@@ -673,17 +669,19 @@ int start_state_tagger
             {
             Tok = Corpus->Token+i;
             wrd = Tok->getWord();
+            std::string_view tempstr;
+
             if(Tok->PreTag)
                 {
                 Tok->Pos = Tok->PreTag; // assume tag from input
                 }
-            else if(  (tempstr = (char *)Registry_get(lexicon_hash,wrd))!= NULL
+            else if(  !(tempstr = find_or_default(lexicon_hash,wrd)).empty()
                    || ( (  heading 
                         || (  startOfLine
                            && ConvertToLowerCaseIfFirstWord == 1
                            )
                         )
-                      && (tempstr = (char *)Registry_get(lexicon_hash,allToLowerUTF8(wrd))) != NULL
+                      && !(tempstr = find_or_default(lexicon_hash,allToLowerUTF8(wrd))).empty()
                       )
                    )
                 {
