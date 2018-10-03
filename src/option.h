@@ -2,6 +2,8 @@
 #define OPTION_H
 
 #include "defines.h"
+#include <string>
+#include <string_view>
 
 typedef enum {
 	GoOn = 0,
@@ -9,43 +11,36 @@ typedef enum {
 	Error = 2,
 } OptReturnTp;
 
-#if defined _WIN32
-#	define commandlineQuote "\""
-#else
-#	define commandlineQuote "\'"
-#endif
-
 struct optionStruct {
-	char* Lexicon;
-	char* Corpus;
-	char* Bigrams;
-	char* Lexicalrulefile;
-	char* Contextualrulefile;
-	char* wdlistname;
-	//char * intermed;
-	bool START_ONLY_FLAG;
-	bool FINAL_ONLY_FLAG;
-	char* xtra; // default: xoptions file (deprecated)
+	std::string OptionPath;
+	std::string Lexicon;
+	std::string Corpus;
+	std::string Bigrams;
+	std::string Lexicalrulefile;
+	std::string Contextualrulefile;
+	std::string wdlistname;
+	bool START_ONLY_FLAG = false;
+	bool FINAL_ONLY_FLAG = false;
+	std::string xtra; // default: xoptions file (deprecated)
 
-	bool ConvertToLowerCaseIfFirstWord;               // -f
-	bool ConvertToLowerCaseIfMostWordsAreCapitalized; // -a
-	bool ShowIfLowercaseConversionHelped;             // -s
-	char* Noun;                                       // -n
-	char* Proper;                                     // -p
-	bool Verbose;                                     // -v
+	bool ConvertToLowerCaseIfFirstWord = false;               // -f
+	bool ConvertToLowerCaseIfMostWordsAreCapitalized = false; // -a
+	bool ShowIfLowercaseConversionHelped = false;             // -s
+	std::string Noun;                                         // -n
+	std::string Proper;                                       // -p
+	bool Verbose = false;                                     // -v
 
-	bool XML;
-	char* ancestor;
-	char* segment;
-	char* element;
-	char* wordAttribute;
-	char* PreTagAttribute;
-	char* POSAttribute;
-	char* Output;
-	optionStruct();
-	~optionStruct();
-	OptReturnTp doSwitch(int c, char* locoptarg, char* progname);
-	OptReturnTp readOptsFromFile(char* locoptarg, char* progname);
+	bool XML = false;
+	std::string ancestor;
+	std::string segment;
+	std::string element;
+	std::string wordAttribute;
+	std::string PreTagAttribute;
+	std::string POSAttribute;
+	std::string Output;
+
+	OptReturnTp doSwitch(int c, std::string_view locoptarg, std::string_view progname);
+	OptReturnTp readOptsFromFile(std::string_view locoptarg, std::string_view progname);
 	OptReturnTp readArgs(int argc, char* argv[]);
 };
 

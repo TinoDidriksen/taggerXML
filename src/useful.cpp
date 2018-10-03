@@ -19,7 +19,7 @@ char* product = NULL;
    product == NULL.
    Default value: NULL */
 char* relative_path_to_xoptions = NULL;
-char* xoptions = NULL;
+std::string xoptions;
 
 int allocated = 0;
 
@@ -29,6 +29,50 @@ int strcmp_nocase(const char* a, const char* b) {
 		ret = strcmp(a, allToLowerUTF8(b));
 	}
 	return ret;
+}
+
+int strcmp_nocase(std::string_view a, std::string_view b) {
+	auto rv = a.compare(b);
+	if (rv && !isUpperUTF8(a.data()) && isUpperUTF8(b.data())) {
+		auto ab = &a.front(), ae = &a.back() + 1, bb = &b.front(), be = &b.back() + 1;
+		while (ab < ae && bb < be) {
+			bool status = true;
+			auto ac = getUTF8char(ab, status);
+			if (!status) {
+				throw new std::runtime_error("Could not get code point from UTF-8 stream 'a'");
+			}
+			status = true;
+			auto bc = getUTF8char(bb, status);
+			if (!status) {
+				throw new std::runtime_error("Could not get code point from UTF-8 stream 'b'");
+			}
+			if (ac == 0 && bc == 0) {
+				return 0;
+			}
+			if (ac == bc) {
+				continue;
+			}
+			if (ac == 0) {
+				return -1;
+			}
+			if (bc == 0) {
+				return 1;
+			}
+			ac = lowerEquivalent(ac);
+			bc = lowerEquivalent(bc);
+			if (ac == bc) {
+				continue;
+			}
+			if (ac < bc) {
+				return -1;
+			}
+			return 1;
+		}
+		if (ab == ae && bb == be) {
+			return 0;
+		}
+	}
+	return rv;
 }
 
 char* dupl(const char* s) {
@@ -78,12 +122,12 @@ int num_words(char* thestr) {
 	return (returncount);
 }
 
-static char* getXoptionsFile() {
-	if (xoptions) {
-		if (!strcmp(xoptions, "-")) { // Bart 20170213 -x- turns off use of xoptions
+static const char* getXoptionsFile() {
+	if (!xoptions.empty()) {
+		if (!strcmp(xoptions.c_str(), "-")) { // Bart 20170213 -x- turns off use of xoptions
 			return NULL;
 		}
-		return xoptions; // Bart 20060321. New option -x <optionfile>
+		return xoptions.c_str(); // Bart 20060321. New option -x <optionfile>
 	}
 
 	// loff
@@ -112,9 +156,9 @@ static char* getXoptionsFile() {
 }
 
 long option(const char* key) {
-	char* XoptionsFile = getXoptionsFile();
+	auto XoptionsFile = getXoptionsFile();
 	if (XoptionsFile) {
-		FILE* fp = fopen(getXoptionsFile(), "rb");
+		FILE* fp = fopen(XoptionsFile, "rb");
 		if (fp) {
 			char line[256];
 			while (fgets(line, 255, fp)) {

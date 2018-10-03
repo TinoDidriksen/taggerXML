@@ -22,107 +22,20 @@ PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.   */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-#define BOOST_DATE_TIME_NO_LIB 1
-#include <boost/interprocess/file_mapping.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-
 #include <fstream>
 
-namespace bi = ::boost::interprocess;
-struct mmap_region {
-	bi::file_mapping fmap;
-	bi::mapped_region mreg;
-	const char* buf;
-	size_t size;
-
-	mmap_region() {}
-
-	mmap_region(const char* fname)
-	  : fmap(fname, bi::read_only)
-	  , mreg(fmap, bi::read_only)
-	  , buf(reinterpret_cast<const char*>(mreg.get_address()))
-	  , size(mreg.get_size()) {}
-};
 mmap_region lexicon_mmap;
 mmap_region lrf_mmap;
 mmap_region bigram_mmap;
 mmap_region wordlist_mmap;
 
-template<typename C>
-inline auto is_space(const C& c) {
-	return ((c == ' ') || (c == '\t') || (c == '\r') || (c == '\n'));
-}
+static std::string Contextualrulefile;
+static bool START_ONLY_FLAG = false;
+static bool FINAL_ONLY_FLAG = false;
 
-inline auto nextline(mmap_region& reg, std::string_view line = {}) {
-	const char* start = reg.buf;
-	const char* end = reg.buf + reg.size;
-
-	// If we were already reading lines, start from the previous line's end
-	if (!line.empty()) {
-		start = &line.back() + 1;
-	}
-
-	// Skip leading space, which also skips the newline that the old back() might be parked behind
-	// Also skips empty lines, which is desired behavior
-	while (start < end && is_space(*start)) {
-		++start;
-	}
-	if (start >= end) {
-		return std::string_view{};
-	}
-
-	// Find the next newline...
-	const char* stop = start;
-	while (stop < end && *stop != '\n') {
-		++stop;
-	}
-	// ...but trim trailing whitespace
-	while (stop > start && is_space(stop[-1])) {
-		--stop;
-	}
-
-	return std::string_view{ start, static_cast<size_t>(stop - start) };
-};
-
-template<size_t N>
-inline auto split(std::string_view str) {
-	std::array<std::string_view, N> strs;
-
-	while (!str.empty() && is_space(str.front())) {
-		str.remove_prefix(1);
-	}
-
-	auto start = &str.front();
-	auto end = &str.back() + 1;
-
-	// Split the first N-1 nicely...
-	for (size_t n = 0; n < N - 1 && start < end; ++n) {
-		auto stop = start;
-		while (stop < end && !is_space(*stop)) {
-			++stop;
-		}
-
-		strs[n] = std::string_view{ start, static_cast<size_t>(stop - start) };
-
-		start = stop;
-		while (start < end && is_space(*start)) {
-			++start;
-		}
-	}
-	// ...but the last part should just contain whatever is left in the input
-	strs[N - 1] = std::string_view{ start, static_cast<size_t>(end - start) };
-
-	return strs;
-}
-
-static const char* Contextualrulefile;
-static bool START_ONLY_FLAG;
-static bool FINAL_ONLY_FLAG;
-
-static int corpussize;
-static int linenums;
-static int tagnums;
+static int corpussize = 0;
+static int linenums = 0;
+static int tagnums = 0;
 static NewRegistry LEXICON_HASH;
 static SV2_Set BIGRAM_HASH;
 static SV_Set WORDLIST_HASH;
@@ -138,6 +51,7 @@ static Registry WORDS;
 #endif
 
 bool createRegistries(
+  std::string_view optpath,
 #if RESTRICT_MOVE
 #	if WITHSEENTAGGING
   Registry* SEENTAGGING,
@@ -149,10 +63,10 @@ bool createRegistries(
   NewRegistry& LEXICON_HASH,
   SV2_Set& BIGRAM_HASH,
   SV_Set& WORDLIST_HASH,
-  const char* Lexicon,
-  const char* Lexicalrulefile,
-  const char* Bigrams,
-  const char* Wordlist,
+  std::string Lexicon,
+  std::string Lexicalrulefile,
+  std::string Bigrams,
+  std::string Wordlist,
 #if !RESTRICT_MOVE
   int START_ONLY_FLAG,
 #endif
@@ -162,6 +76,7 @@ bool createRegistries(
 	SV_Set& wordlist_hash{ WORDLIST_HASH };
 	NewDarray& rule_array{ RULE_ARRAY };
 
+	Lexicon = find_file(optpath, Lexicon);
 	lexicon_mmap = mmap_region{ Lexicon };
 	for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
 		auto strs = split<2>(line);
@@ -174,6 +89,7 @@ bool createRegistries(
 	SV_Set good_right_hash;
 	SV_Set good_left_hash;
 
+	Lexicalrulefile = find_file(optpath, Lexicalrulefile);
 	lrf_mmap = mmap_region{ Lexicalrulefile };
 	for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
 		auto perl_split_ptr = split<6>(line);
@@ -193,6 +109,7 @@ bool createRegistries(
 	}
 
 	/* read in bigram file */
+	Bigrams = find_file(optpath, Bigrams);
 	bigram_mmap = mmap_region{ Bigrams };
 	for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
 		auto bigram = split<2>(line);
@@ -204,7 +121,8 @@ bool createRegistries(
 		}
 	}
 
-	if (Wordlist) {
+	if (!Wordlist.empty()) {
+		Wordlist = find_file(optpath, Wordlist);
 		wordlist_mmap = mmap_region{ Wordlist };
 		for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
 			wordlist_hash.emplace(line);
@@ -213,28 +131,8 @@ bool createRegistries(
 	return true;
 }
 
-static void deleteRegistries(
-#if RESTRICT_MOVE
-#	if WITHSEENTAGGING
-  Registry SEENTAGGING,
-#	endif
-#	if WITHWORDS
-  Registry WORDS,
-#	endif
-#endif
-) {
-#if RESTRICT_MOVE
-#	if WITHSEENTAGGING
-	freeRegistry(SEENTAGGING);
-#	endif
-#	if WITHWORDS
-	freeRegistry(WORDS);
-#	endif
-#endif
-}
-
 tagger::tagger() {
-	Contextualrulefile = NULL;
+	Contextualrulefile.clear();
 	corpussize = 0;
 	linenums = 0;
 	tagnums = 0;
@@ -253,23 +151,26 @@ tagger::tagger() {
 }
 
 bool tagger::init(
-  const char* _Lexicon,
-  const char* _Bigrams,
-  const char* _Lexicalrulefile,
-  const char* _Contextualrulefile,
-  const char* _wdlistname,
+  std::string_view optpath,
+  const std::string& _Lexicon,
+  const std::string& _Bigrams,
+  const std::string& _Lexicalrulefile,
+  const std::string& _Contextualrulefile,
+  const std::string& _wdlistname,
   bool _START_ONLY_FLAG,
   bool _FINAL_ONLY_FLAG) {
 	Contextualrulefile = _Contextualrulefile;
 	START_ONLY_FLAG = _START_ONLY_FLAG;
 	FINAL_ONLY_FLAG = _FINAL_ONLY_FLAG;
-	if ((START_ONLY_FLAG && FINAL_ONLY_FLAG) || (FINAL_ONLY_FLAG && _wdlistname)) {
+
+	if ((START_ONLY_FLAG && FINAL_ONLY_FLAG) || (FINAL_ONLY_FLAG && !_wdlistname.empty())) {
 		fprintf(stderr, "This set of options does not make sense.\n");
 		return false;
 	}
 
 
 	return createRegistries(
+	  optpath,
 #if RESTRICT_MOVE
 #	if WITHSEENTAGGING
 	  &SEENTAGGING,
@@ -295,13 +196,14 @@ bool tagger::init(
 bool tagger::analyse(std::istream& CORPUS, std::ostream& fpout, optionStruct* Options) {
 	text* Text = NULL;
 	if (Options->XML) {
-		Text = new XMLtext(CORPUS, "$w\\s",   //char * Iformat
-		  true,                               //bool XML
-		  Options->ancestor,                  //"p"//const char * ancestor // restrict POS-tagging to segments that fit in ancestor elements
-		  Options->segment, Options->element, //"w"//const char * element // analyse PCDATA inside elements
-		  Options->wordAttribute,             //NULL//const char * wordAttribute // if null, word is PCDATA
-		  Options->PreTagAttribute,           // Store POS in PreTagAttribute
-		  Options->POSAttribute               //"lemma"//const char * POSAttribute // if null, Lemma is PCDATA
+		Text = new XMLtext(CORPUS, "$w\\s", //char * Iformat
+		  true,                             //bool XML
+		  Options->ancestor,                //"p"//const char * ancestor // restrict POS-tagging to segments that fit in ancestor elements
+		  Options->segment,
+		  Options->element,         //"w"//const char * element // analyse PCDATA inside elements
+		  Options->wordAttribute,   //NULL//const char * wordAttribute // if null, word is PCDATA
+		  Options->PreTagAttribute, // Store POS in PreTagAttribute
+		  Options->POSAttribute     //"lemma"//const char * POSAttribute // if null, Lemma is PCDATA
 		);
 	}
 	else {

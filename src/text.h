@@ -3,6 +3,7 @@
 
 #include "defines.h"
 #include "substring.h"
+#include <string>
 #include <string_view>
 #include <iostream>
 
@@ -182,7 +183,7 @@ protected:
 	unsigned long int total;
 	field* fields;
 	void AddField(field* fld);
-	field* translateFormat(const char* Iformat, field*& wordfield);
+	field* translateFormat(std::string_view Iformat, field*& wordfield);
 	void insert(const char* w, const char* tag);
 
 public:

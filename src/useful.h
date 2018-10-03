@@ -2,6 +2,8 @@
 #define _USEFUL_H
 
 #include "sysdep.h"
+#include <string>
+#include <string_view>
 
 #ifndef NULL
 #	define NULL 0
@@ -36,6 +38,7 @@
 #endif
 
 extern int strcmp_nocase(const char* string1, const char* string2);
+extern int strcmp_nocase(std::string_view string1, std::string_view string2);
 //extern const char * uncapitalize(const char * word);
 extern char* dupl(const char* s);
 extern char* mystrdup(const char*);
@@ -59,7 +62,7 @@ extern char* product;
    product == NULL.
    Default value: NULL */
 extern char* relative_path_to_xoptions;
-extern char* xoptions;
+extern std::string xoptions;
 
 long option(const char* key);
 char* coption(const char* key);

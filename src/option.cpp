@@ -30,59 +30,7 @@ static char*** Ppoptions = NULL;
 static char** Poptions = NULL;
 static int optionSets = 0;
 
-/*static bool boolean(const char * locoptarg)
-    {
-    return locoptarg ? *locoptarg == '-' ? false : true : true;
-    }*/
-
-optionStruct::optionStruct()
-  : Lexicon(0)
-  , Corpus(0)
-  , Bigrams(0)
-  , Lexicalrulefile(0)
-  , Contextualrulefile(0)
-  , wdlistname(0)
-  //,intermed(0)
-  , START_ONLY_FLAG(false)
-  , FINAL_ONLY_FLAG(false)
-  , xtra(0)
-  , ConvertToLowerCaseIfFirstWord(false)               // -f
-  , ConvertToLowerCaseIfMostWordsAreCapitalized(false) // -a
-  , ShowIfLowercaseConversionHelped(false)             // -s
-  , Noun(0)                                            // -n
-  , Proper(0)                                          // -p
-  , Verbose(false)                                     // -v
-  , XML(false)
-  , ancestor(0)
-  , segment(0)
-  , element(0)
-  , wordAttribute(0)
-  , PreTagAttribute(0)
-  , POSAttribute(0)
-  , Output(0) {
-}
-
-optionStruct::~optionStruct() {
-	delete[] Lexicon;
-	delete[] Corpus;
-	delete[] Bigrams;
-	delete[] Lexicalrulefile;
-	delete[] Contextualrulefile;
-	delete[] wdlistname;
-	//delete [] intermed;
-	delete[] xtra;
-	delete[] Noun;   // -n
-	delete[] Proper; // -p
-	delete[] ancestor;
-	delete[] segment;
-	delete[] element;
-	delete[] wordAttribute;
-	delete[] PreTagAttribute;
-	delete[] POSAttribute;
-	delete[] Output;
-}
-
-OptReturnTp optionStruct::doSwitch(int c, char* locoptarg, char* progname) {
+OptReturnTp optionStruct::doSwitch(int c, std::string_view locoptarg, std::string_view progname) {
 	switch (c) {
 	case '@':
 		readOptsFromFile(locoptarg, progname);
@@ -90,7 +38,7 @@ OptReturnTp optionStruct::doSwitch(int c, char* locoptarg, char* progname) {
 	case 'h':
 	case '?':
 		printf("usage:\n");
-		printf("%s [options] [LEXICON] [CORPUS-TO-TAG] [BIGRAMS] [LEXICALRULEFILE] [CONTEXTUALRULEFILE]\n", progname);
+		printf("%s [options] [LEXICON] [CORPUS-TO-TAG] [BIGRAMS] [LEXICALRULEFILE] [CONTEXTUALRULEFILE]\n", progname.data());
 		printf("options:\n");
 		printf("    -@<optionsfile>\n");
 		printf("    -h   help\n");
@@ -101,7 +49,6 @@ OptReturnTp optionStruct::doSwitch(int c, char* locoptarg, char* progname) {
 		printf("    -L<LEXICALRULEFILE>\n");
 		printf("    -C<CONTEXTUALRULEFILE>\n");
 		printf("    -w<WORDLIST>\n");
-		printf("    -m<INTERMEDFILE>\n");
 		printf("    -S   start state tagger only\n");
 		printf("    -F   final state tagger only\n");
 		printf("    -o<out> output (optional, otherwise stdout)\n");
@@ -138,48 +85,42 @@ OptReturnTp optionStruct::doSwitch(int c, char* locoptarg, char* progname) {
 		ShowIfLowercaseConversionHelped = true; //boolean(locoptarg);
 		break;
 	case 'n':
-		Noun = dupl(locoptarg); //(default NN)\n");
+		Noun = locoptarg; //(default NN)\n");
 		break;
 	case 'p':
-		Proper = dupl(locoptarg); // (default NNP)\n");
+		Proper = locoptarg; // (default NNP)\n");
 		break;
 	case 'v':
 		Verbose = true; //boolean(locoptarg);
 		break;
 	case 'D':
 		//LEXICON
-		Lexicon = dupl(locoptarg);
+		Lexicon = locoptarg;
 		break;
 	case 'i':
 		//CORPUS-TO-TAG
-		Corpus = dupl(locoptarg);
+		Corpus = locoptarg;
 		break;
 	case 'o':
-		Output = dupl(locoptarg);
+		Output = locoptarg;
 		break;
 	case 'B':
 		//BIGRAMS
-		Bigrams = dupl(locoptarg);
+		Bigrams = locoptarg;
 		break;
 	case 'L':
 		//LEXICALRULEFILE
-		Lexicalrulefile = dupl(locoptarg);
+		Lexicalrulefile = locoptarg;
 		break;
 	case 'C':
 		//CONTEXTUALRULEFILE
-		Contextualrulefile = dupl(locoptarg);
+		Contextualrulefile = locoptarg;
 		break;
 	case 'd':
 	case 'w':
 		//WORDLIST
-		wdlistname = dupl(locoptarg);
+		wdlistname = locoptarg;
 		break;
-		/*
-            case 'm':
-                //INTERMEDFILE
-                intermed = dupl(locoptarg);
-                break;
-                */
 	case 'S':
 		//start state tagger only
 		START_ONLY_FLAG = true;
@@ -190,33 +131,33 @@ OptReturnTp optionStruct::doSwitch(int c, char* locoptarg, char* progname) {
 		break;
 	case 'x':
 		//path to file with extra options
-		xoptions = dupl(locoptarg);
+		xoptions = locoptarg;
 		break;
 	case 'X':
-		if (locoptarg) {
-			if (*locoptarg == '-') {
+		if (!locoptarg.empty()) {
+			if (locoptarg.front() == '-') {
 				XML = false;
 			}
 			else {
 				XML = true;
-				switch (*locoptarg) {
+				switch (locoptarg.front()) {
 				case 'a':
-					ancestor = dupl(locoptarg + 1);
+					ancestor = locoptarg.substr(1);
 					break;
 				case 's':
-					segment = dupl(locoptarg + 1);
+					segment = locoptarg.substr(1);
 					break;
 				case 'e':
-					element = dupl(locoptarg + 1);
+					element = locoptarg.substr(1);
 					break;
 				case 'w':
-					wordAttribute = dupl(locoptarg + 1);
+					wordAttribute = locoptarg.substr(1);
 					break;
 				case 't':
-					PreTagAttribute = dupl(locoptarg + 1);
+					PreTagAttribute = locoptarg.substr(1);
 					break;
 				case 'p':
-					POSAttribute = dupl(locoptarg + 1);
+					POSAttribute = locoptarg.substr(1);
 					break;
 				}
 			}
@@ -253,10 +194,12 @@ OptReturnTp optionStruct::doSwitch(int c, char* locoptarg, char* progname) {
 }
 
 
-OptReturnTp optionStruct::readOptsFromFile(char* locoptarg, char* progname) {
+OptReturnTp optionStruct::readOptsFromFile(std::string_view locoptarg, std::string_view progname) {
+	OptionPath = locoptarg;
+
 	char** poptions;
 	char* options;
-	FILE* fpopt = fopen(locoptarg, "rb");
+	FILE* fpopt = fopen(locoptarg.data(), "rb");
 	OptReturnTp result = GoOn;
 	if (fpopt) {
 		char* p;
@@ -323,14 +266,14 @@ OptReturnTp optionStruct::readOptsFromFile(char* locoptarg, char* progname) {
 					if (optpos) {
 						if (optpos[1] != ':') {
 							if (locoptarg2) {
-								printf("Option argument %s provided for option letter %c that doesn't use it on line %d in option file \"%s\"\n", locoptarg2, line[off], lineno, locoptarg);
+								printf("Option argument %s provided for option letter %c that doesn't use it on line %d in option file \"%s\"\n", locoptarg2, line[off], lineno, locoptarg.data());
 								exit(1);
 							}
 						}
 					}
 				}
 				else {
-					printf("Missing option letter on line %d in option file \"%s\"\n", lineno, locoptarg);
+					printf("Missing option letter on line %d in option file \"%s\"\n", lineno, locoptarg.data());
 					exit(1);
 				}
 			}
@@ -431,7 +374,7 @@ OptReturnTp optionStruct::readOptsFromFile(char* locoptarg, char* progname) {
 		fclose(fpopt);
 	}
 	else {
-		fprintf(stderr, "Cannot open option file \"%s\" for reading\n", locoptarg);
+		fprintf(stderr, "Cannot open option file \"%s\" for reading\n", locoptarg.data());
 		exit(1);
 	}
 	return result;

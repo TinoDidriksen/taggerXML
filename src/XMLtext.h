@@ -38,14 +38,11 @@ private:
 	char* endAttributeName;
 	char* startValue;
 	char* endValue;
-	const char* ancestor;        // if not null, restrict POS-tagging to elements that are offspring of ancestor
-	const char* segment;         // Optional segment delimiter. E.g. br: <br /> or s: <s> ... </s>
-	const char* element;         // if not null, analyse only element's attributes and/or PCDATA
-	const char* PreTagAttribute; // if null, POS is PCDATA
-	const char* POSAttribute;    // Store POS in POSAttribute
-	int wordAttributeLen;
-	int PreTagAttributeLen;
-	int POSAttributeLen;
+	std::string_view ancestor;        // if not null, restrict POS-tagging to elements that are offspring of ancestor
+	std::string_view segment;         // Optional segment delimiter. E.g. br: <br /> or s: <s> ... </s>
+	std::string_view element;         // if not null, analyse only element's attributes and/or PCDATA
+	std::string_view PreTagAttribute; // if null, POS is PCDATA
+	std::string_view POSAttribute;    // Store POS in POSAttribute
 	crumb* Crumbs;
 	bool ClosingTag;
 	bool WordPosComing;
@@ -54,7 +51,7 @@ private:
 
 public:
 	virtual const char* convert(const char* s);
-	const char* wordAttribute; // if null, word is PCDATA
+	std::string_view wordAttribute; // if null, word is PCDATA
 public:
 	bool analyseThis();
 	token* getCurrentToken();
@@ -69,15 +66,17 @@ public:
 	void CallBackEmptyTag();
 	void CallBackNoMoreAttributes();
 	XMLtext(
-	  std::istream& fpi, const char* Iformat,
+	  std::istream& fpi,
+	  std::string_view Iformat,
 	  // bool nice,
 	  // unsigned long int size,
-	  bool XML, const char* ancestor, // if not null, restrict POS-tagging to elements that are offspring of ancestor
-	  const char* segment,            // Optional segment delimiter. E.g. br: <br /> or s: <s> ... </s>
-	  const char* element,            // analyse PCDATA inside elements
-	  const char* wordAttribute,      // if null, word is PCDATA
-	  const char* PreTagAttribute,    // Fetch pretagging from PreTagAttribute
-	  const char* POSAttribute        // Store POS in POSAttribute
+	  bool XML,
+	  const std::string& ancestor,        // if not null, restrict POS-tagging to elements that are offspring of ancestor
+	  const std::string& segment,         // Optional segment delimiter. E.g. br: <br /> or s: <s> ... </s>
+	  const std::string& element,         // analyse PCDATA inside elements
+	  const std::string& wordAttribute,   // if null, word is PCDATA
+	  const std::string& PreTagAttribute, // Fetch pretagging from PreTagAttribute
+	  const std::string& POSAttribute     // Store POS in POSAttribute
 	);
 	~XMLtext() {}
 	virtual void printUnsorted(std::ostream& fpo);

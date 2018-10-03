@@ -37,19 +37,19 @@ void text::AddField(field* fld) {
 	}
 }
 
-field* text::translateFormat(const char* Iformat, field*& wordfield /*,field *& tagfield*/) {
+field* text::translateFormat(std::string_view Iformat, field*& wordfield /*,field *& tagfield*/) {
 	bool escape = false;
 	bool afield = false;
 	const char* pformat;
 	field* litteral = 0;
-	for (pformat = Iformat; *pformat; ++pformat) {
+	for (pformat = Iformat.data(); *pformat; ++pformat) {
 		if (afield) {
 			afield = false;
 			switch (*pformat) {
 			case 'w':
 				if (wordfield) {
-					printf("Invalid format string \"%s\"\n", Iformat);
-					printf("                        %*c\n", (int)(strlen(Iformat) - strlen(pformat)), '^');
+					printf("Invalid format string \"%s\"\n", Iformat.data());
+					printf("                        %*c\n", (int)(Iformat.size() - strlen(pformat)), '^');
 					exit(0);
 				}
 				wordfield = new readValue();
@@ -72,8 +72,8 @@ field* text::translateFormat(const char* Iformat, field*& wordfield /*,field *& 
 				AddField(new readValue());
 				break;
 			default: {
-				printf("Invalid format string \"%s\"\n", Iformat);
-				printf("                        %*c\n", (int)(strlen(Iformat) - strlen(pformat)), '^');
+				printf("Invalid format string \"%s\"\n", Iformat.data());
+				printf("                        %*c\n", (int)(Iformat.size() - strlen(pformat)), '^');
 				exit(0);
 			}
 			}
@@ -98,8 +98,8 @@ field* text::translateFormat(const char* Iformat, field*& wordfield /*,field *& 
 				AddField(new readNewLine);
 				break;
 			default: {
-				printf("Invalid format string \"%s\"\n", Iformat);
-				printf("                        %*c\n", (int)(strlen(Iformat) - strlen(pformat)), '^');
+				printf("Invalid format string \"%s\"\n", Iformat.data());
+				printf("                        %*c\n", (int)(Iformat.size() - strlen(pformat)), '^');
 				exit(0);
 			}
 			}

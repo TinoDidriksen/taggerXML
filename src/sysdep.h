@@ -12,6 +12,21 @@
 #	pragma warning(disable : 4312)
 #endif
 
+#include <sys/stat.h>
+#include <string>
+#include <string_view>
+
+inline std::string find_file(std::string_view path, std::string name) {
+	struct stat _stat;
+	auto err = stat(name.c_str(), &_stat);
+	if (err == 0) {
+		return name;
+	}
+
+	name.insert(0, path);
+	return name;
+}
+
 #define NORET void
 
 /* CONSTVOIDP is for pointers to non-modifyable void objects */

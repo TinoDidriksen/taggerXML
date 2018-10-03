@@ -5,10 +5,12 @@
 #include "newregistry.h"
 #include "defines.h"
 #include <iostream>
+#include <string>
+#include <string_view>
 
 struct optionStruct;
 
-int final_state_tagger(const char* Contextualrulefile,
+int final_state_tagger(std::string Contextualrulefile,
 #if RESTRICT_MOVE
 #	if WITHSEENTAGGING
   Registry SEENTAGGING,

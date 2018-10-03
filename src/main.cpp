@@ -54,9 +54,9 @@ int main(int argc, char** argv) {
 	// --i;
 #endif
 
-	if (Option.Output != NULL) {
-		if (freopen(Option.Output, "wb", stdout) == NULL) {
-			fprintf(stderr, "Cannot reassign stdout to %s\n", Option.Output);
+	if (!Option.Output.empty()) {
+		if (freopen(Option.Output.c_str(), "wb", stdout) == NULL) {
+			fprintf(stderr, "Cannot reassign stdout to %s\n", Option.Output.c_str());
 			return 1;
 		}
 	}
@@ -71,20 +71,20 @@ int main(int argc, char** argv) {
 			// Background: a bug in VC2008 causes "> myoutput" to be interpreted as two extra arguments by the debugger.
 			continue;
 		}
-		if (!Option.Lexicon) {
-			Option.Lexicon = dupl(argv[i]);
+		if (Option.Lexicon.empty()) {
+			Option.Lexicon = argv[i];
 		}
-		else if (!Option.Corpus) {
-			Option.Corpus = dupl(argv[i]);
+		else if (Option.Corpus.empty()) {
+			Option.Corpus = argv[i];
 		}
-		else if (!Option.Bigrams) {
-			Option.Bigrams = dupl(argv[i]);
+		else if (Option.Bigrams.empty()) {
+			Option.Bigrams = argv[i];
 		}
-		else if (!Option.Lexicalrulefile) {
-			Option.Lexicalrulefile = dupl(argv[i]);
+		else if (Option.Lexicalrulefile.empty()) {
+			Option.Lexicalrulefile = argv[i];
 		}
-		else if (!Option.START_ONLY_FLAG && !Option.Contextualrulefile) {
-			Option.Contextualrulefile = dupl(argv[i]);
+		else if (!Option.START_ONLY_FLAG && Option.Contextualrulefile.empty()) {
+			Option.Contextualrulefile = argv[i];
 		}
 		else
 #if _DEBUG
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 		// Workaround: Just add myoutput as an extra argument during debugging. (without >)
 		//freopen(argv[6+temp],"wb",stdout);
 		{
-			if (Option.Output == NULL) {
+			if (Option.Output.empty()) {
 				freopen(argv[i], "wb", stdout);
 			}
 		}
@@ -105,21 +105,31 @@ int main(int argc, char** argv) {
 #endif
 	}
 
-	if (!Option.Lexicon) {
+	if (Option.Lexicon.empty()) {
 		fprintf(stderr, "Lexicon not defined\n");
 		return 1;
 	}
-	else if (!Option.Bigrams) {
+	else if (Option.Bigrams.empty()) {
 		fprintf(stderr, "Bigrams not defined\n");
 		return 1;
 	}
-	else if (!Option.Lexicalrulefile) {
+	else if (Option.Lexicalrulefile.empty()) {
 		fprintf(stderr, "Lexical rule file not defined\n");
 		return 1;
 	}
+
+	// Trim filename so that we get the folder path, if any
+	while (!Option.OptionPath.empty() && Option.OptionPath.back() != '/'&& Option.OptionPath.back() != '\\') {
+		Option.OptionPath.pop_back();
+	}
+
 	tagger theTagger;
 
-	if (!theTagger.init(Option.Lexicon, Option.Bigrams, Option.Lexicalrulefile, Option.Contextualrulefile,
+	if (!theTagger.init(Option.OptionPath,
+	      Option.Lexicon,
+	      Option.Bigrams,
+	      Option.Lexicalrulefile,
+	      Option.Contextualrulefile,
 	      Option.wdlistname,      // w
 	      Option.START_ONLY_FLAG, // S
 	      Option.FINAL_ONLY_FLAG  // F
@@ -127,7 +137,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	if (!Option.Corpus) {
+	if (Option.Corpus.empty()) {
 		fprintf(stderr, "Corpus not defined\n");
 		return 1;
 	}

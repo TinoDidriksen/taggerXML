@@ -53,7 +53,8 @@ int start_state_tagger(NewRegistry& lexicon_hash, corpus* Corpus, SV2_Set& bigra
 	                                 //    hashmap::hash<strng> * tag_hash;
 	strng** tag_array;
 	char* tempstr2;
-	char noun[20] = { '\0' }, proper[20] = { '\0' };
+	std::string_view noun{ "NN" };
+	std::string_view proper{ "NNP" };
 	int tempcount;
 	unsigned int count, count2, count3;
 	char tempstr_space[MAXWORDLEN + MAXAFFIXLEN];
@@ -72,9 +73,10 @@ int start_state_tagger(NewRegistry& lexicon_hash, corpus* Corpus, SV2_Set& bigra
 		Verbose = Options->Verbose ? 1 : 0;
 	}
 
-	if (Options->Noun) {
-		strncpy(noun, Options->Noun, sizeof(noun) - 1);
+	if (!Options->Noun.empty()) {
+		noun = Options->Noun;
 	}
+	/*
 	else {
 		char* tmp;
 		tmp = coption("Noun");
@@ -83,10 +85,12 @@ int start_state_tagger(NewRegistry& lexicon_hash, corpus* Corpus, SV2_Set& bigra
 			noun[sizeof(noun) - 1] = '\0';
 		}
 	}
+	//*/
 
-	if (Options->Proper) {
-		strncpy(proper, Options->Proper, sizeof(noun) - 1);
+	if (!Options->Proper.empty()) {
+		proper = Options->Proper;
 	}
+	/*
 	else {
 		char* tmp;
 		tmp = coption("Proper");
@@ -95,6 +99,7 @@ int start_state_tagger(NewRegistry& lexicon_hash, corpus* Corpus, SV2_Set& bigra
 			proper[sizeof(proper) - 1] = '\0';
 		}
 	}
+	//*/
 
 	/***********************************************************************/
 
@@ -145,13 +150,6 @@ int start_state_tagger(NewRegistry& lexicon_hash, corpus* Corpus, SV2_Set& bigra
 	/********** START STATE ALGORITHM
     YOU CAN USE OR EDIT ONE OF THE TWO START STATE ALGORITHMS BELOW,
 # OR REPLACE THEM WITH YOUR OWN ************************/
-
-	if (!*noun) {
-		strcpy(noun, "NN");
-	}
-	if (!*proper) {
-		strcpy(proper, "NNP");
-	}
 
 	/* UNCOMMENT THIS AND COMMENT OUT START STATE 2 IF ALL UNKNOWN WORDS
         SHOULD INITIALLY BE ASSUMED TO BE TAGGED WITH "NN".

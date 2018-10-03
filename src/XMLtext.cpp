@@ -109,16 +109,16 @@ public:
 		}
 		printf("->%s", e);
 	}
-	bool is(const char* elm) {
-		return !strcmp(e, elm);
+	bool is(std::string_view elm) {
+		return (elm.compare(e) == 0);
 	}
 };
 
 bool XMLtext::analyseThis() {
-	if (element) {
+	if (!element.empty()) {
 		return Crumbs && Crumbs->is(element);
 	}
-	if (ancestor) {
+	if (!ancestor.empty()) {
 		return Crumbs != NULL;
 	}
 	return true;
@@ -188,20 +188,20 @@ void XMLtext::CallBackEndElementName() {
 		if (Crumbs) {
 			Crumbs = Crumbs->pop(startElement, endElement - startElement);
 			if (!Crumbs) { // End of segment reached
-				if (this->total > 0 && this->Token) {
-					this->Token[total - 1].lastOfLine = true;
-					this->Token[total].firstOfLine = true;
+				if (total > 0 && Token) {
+					Token[total - 1].lastOfLine = true;
+					Token[total].firstOfLine = true;
 				}
 			}
 		}
 		ClosingTag = false;
 	}
 	else {
-		if (Crumbs || !this->ancestor || (startElement + strlen(this->ancestor) == endElement && !strncmp(startElement, this->ancestor, endElement - startElement))) {
+		if (Crumbs || ancestor.empty() || (startElement + ancestor.size() == endElement && !strncmp(startElement, ancestor.data(), endElement - startElement))) {
 			Crumbs = new crumb(startElement, endElement - startElement, Crumbs);
-			if (segment && this->total > 0 && this->Token && !strncmp(startElement, segment, endElement - startElement)) {
-				this->Token[total - 1].lastOfLine = true;
-				this->Token[total].firstOfLine = true;
+			if (!segment.empty() && total > 0 && Token && !strncmp(startElement, segment.data(), endElement - startElement)) {
+				Token[total - 1].lastOfLine = true;
+				Token[total].firstOfLine = true;
 			}
 		}
 	}
@@ -217,7 +217,7 @@ void XMLtext::CallBackStartAttributeName() {
 void XMLtext::CallBackEndAttributeNameCounting() {
 	if (analyseThis()) {
 		endAttributeName = ch;
-		if (this->wordAttributeLen == endAttributeName - startAttributeName && !strncmp(startAttributeName, this->wordAttribute, wordAttributeLen)) {
+		if (wordAttribute.size() == endAttributeName - startAttributeName && !strncmp(startAttributeName, wordAttribute.data(), wordAttribute.size())) {
 			++total;
 		}
 	}
@@ -232,13 +232,13 @@ void XMLtext::CallBackEndAttributeNameInserting() {
 		POSPosComing = false;
 
 
-		if (this->wordAttributeLen == endAttributeName - startAttributeName && !strncmp(startAttributeName, this->wordAttribute, wordAttributeLen)) {
+		if (wordAttribute.size() == endAttributeName - startAttributeName && !strncmp(startAttributeName, wordAttribute.data(), wordAttribute.size())) {
 			WordPosComing = true;
 		}
-		else if (this->POSAttributeLen == endAttributeName - startAttributeName && !strncmp(startAttributeName, this->POSAttribute, POSAttributeLen)) {
+		else if (POSAttribute.size() == endAttributeName - startAttributeName && !strncmp(startAttributeName, POSAttribute.data(), POSAttribute.size())) {
 			POSPosComing = true;
 		}
-		else if (this->PreTagAttributeLen == endAttributeName - startAttributeName && !strncmp(startAttributeName, this->PreTagAttribute, PreTagAttributeLen)) {
+		else if (PreTagAttribute.size() == endAttributeName - startAttributeName && !strncmp(startAttributeName, PreTagAttribute.data(), PreTagAttribute.size())) {
 			PreTagPosComing = true;
 		}
 	}
@@ -254,13 +254,13 @@ void XMLtext::CallBackEndValue() {
 	if (analyseThis()) {
 		endValue = ch;
 		if (WordPosComing) {
-			this->Token[total].setWord(startValue, endValue, this);
+			Token[total].setWord(startValue, endValue, this);
 		}
 		else if (PreTagPosComing) {
-			this->Token[total].setPreTagpos(startValue, endValue);
+			Token[total].setPreTagpos(startValue, endValue);
 		}
 		else if (POSPosComing) {
-			this->Token[total].setPOSpos(startValue, endValue);
+			Token[total].setPOSpos(startValue, endValue);
 		}
 	}
 }
@@ -421,9 +421,9 @@ public:
 };
 
 void XMLtext::printUnsorted(std::ostream& fpo) {
-	if (this->alltext) {
+	if (alltext) {
 		unsigned int k;
-		const char* o = this->alltext;
+		const char* o = alltext;
 		for (k = 0; k < total; ++k) {
 			const char* start = Token[k].WordGetStart();
 			const char* end = Token[k].WordGetEnd();
@@ -495,13 +495,15 @@ void CallBackEmptyTag(void* arg) {
 }
 
 XMLtext::XMLtext(
-  std::istream& fpi, const char* Iformat, bool XML,
-  const char* ancestor,        // restrict POS-tagging to segments that fit in ancestor elements
-  const char* segment,         // Optional segment delimiter. E.g. br: <br /> or s: <s> ... </s>
-  const char* element,         // analyse PCDATA inside elements
-  const char* wordAttribute,   // if null, word is PCDATA
-  const char* PreTagAttribute, // Fetch pretagging from PreTagAttribute
-  const char* POSAttribute     // Store POS in POSAttribute
+  std::istream& fpi,
+  std::string_view Iformat,
+  bool XML,
+  const std::string& ancestor,        // restrict POS-tagging to segments that fit in ancestor elements
+  const std::string& segment,         // Optional segment delimiter. E.g. br: <br /> or s: <s> ... </s>
+  const std::string& element,         // analyse PCDATA inside elements
+  const std::string& wordAttribute,   // if null, word is PCDATA
+  const std::string& PreTagAttribute, // Fetch pretagging from PreTagAttribute
+  const std::string& POSAttribute     // Store POS in POSAttribute
   )
   : text()
   , ancestor(ancestor)
@@ -515,9 +517,7 @@ XMLtext::XMLtext(
   , PreTagPosComing(false)
   , POSPosComing(false)
   , wordAttribute(wordAttribute) {
-	wordAttributeLen = wordAttribute ? strlen(wordAttribute) : 0;
-	PreTagAttributeLen = PreTagAttribute ? strlen(PreTagAttribute) : 0;
-	POSAttributeLen = POSAttribute ? strlen(POSAttribute) : 0;
+
 #ifdef COUNTOBJECTS
 	++COUNT;
 #endif
@@ -525,7 +525,7 @@ XMLtext::XMLtext(
 	field* wordfield;
 	field* format = 0;
 
-	if (XML && Iformat) {
+	if (XML && !Iformat.empty()) {
 		fpi.seekg(0, std::ios::end);
 		long filesize = static_cast<long>(fpi.tellg());
 		fpi.seekg(0, std::ios::beg);
@@ -546,7 +546,7 @@ XMLtext::XMLtext(
 		parseAsXml();
 		html_tag_class html_tag(this);
 		CallBackEndAttributeNames = &XMLtext::CallBackEndAttributeNameCounting;
-		if (element || ancestor) {
+		if (!element.empty() || !ancestor.empty()) {
 			html_tag.setCallBackStartElementName(::CallBackStartElementName);
 			html_tag.setCallBackEndElementName(::CallBackEndElementName);
 			html_tag.setCallBackEndTag(::CallBackEndTag);
@@ -558,7 +558,7 @@ XMLtext::XMLtext(
 			html_tag.setCallBackEndTag(::dummyCallBack);
 			html_tag.setCallBackEmptyTag(::dummyCallBack);
 		}
-		if (wordAttribute || POSAttribute || PreTagAttribute) {
+		if (!wordAttribute.empty() || !POSAttribute.empty() || !PreTagAttribute.empty()) {
 			html_tag.setCallBackStartAttributeName(::CallBackStartAttributeName);
 			html_tag.setCallBackEndAttributeName(::CallBackEndAttributeName);
 		}
@@ -578,10 +578,10 @@ XMLtext::XMLtext(
 		int loop;
 		fnc = &wordReader::count;
 		wordfield = 0;
-		if (Iformat) {
+		if (!Iformat.empty()) {
 			format = translateFormat(Iformat, wordfield);
 			if (!wordfield) {
-				printf("Input format %s must specify '$w'.\n", Iformat);
+				printf("Input format %s must specify '$w'.\n", Iformat.data());
 				exit(0);
 			}
 		}
@@ -631,7 +631,7 @@ XMLtext::XMLtext(
 				curr_pos = alltext;
 				fnc = &wordReader::read;
 				CallBackEndAttributeNames = &XMLtext::CallBackEndAttributeNameInserting;
-				if (wordAttribute || PreTagAttribute || POSAttribute) {
+				if (!wordAttribute.empty() || !PreTagAttribute.empty() || !POSAttribute.empty()) {
 					html_tag.setCallBackStartAttributeName(::CallBackStartAttributeName);
 					html_tag.setCallBackEndAttributeName(::CallBackEndAttributeName);
 					html_tag.setCallBackStartValue(::CallBackStartValue);
