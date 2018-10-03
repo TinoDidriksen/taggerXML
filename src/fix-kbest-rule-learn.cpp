@@ -31,7 +31,7 @@ int is_tagged_with(char *tag,char *tagseq)
   temp = mystrdup(tagseq);
   temp2 = strtok(temp,"_");
   while (temp2 != NULL &&
-	 strcmp(temp2,tag) != 0) 
+	 strcmp(temp2,tag) != 0)
     temp2 = strtok(NULL,"_");
   if (temp2 == NULL ){ free(temp); return(0);}
   else { free(temp); return(1); }
@@ -45,10 +45,10 @@ char *first_tag_nospace(char *tagstr)
   temp  = mystrdup(tagstr);
   temp2 = strtok(temp,"_");
   strcpy(globalstring,temp2);
-  free(temp); 
+  free(temp);
   return(globalstring);
 }
- 
+
 int main(int             argc, char           *argv[])
 {
 
@@ -128,8 +128,8 @@ int main(int             argc, char           *argv[])
 	corpus_size = Darray_len(tag_corpus_array) - 1;
 	strcpy(line,argv[1]);
 	for (ccount=0;ccount<strlen(line);++ccount) /*patch for sing quote*/
-	  if (*(line+ccount) == '\b') 
-	    *(line+ccount) = '\''; 
+	  if (*(line+ccount) == '\b')
+	    *(line+ccount) = '\'';
 	  if (strlen(line) > 1) {
 	    split_ptr = perl_split(line);
 	    strcpy(old, split_ptr[0]);
@@ -144,7 +144,7 @@ int main(int             argc, char           *argv[])
 		strcmp(when, "PREV1OR2TAG") == 0 ||
 		strcmp(when, "PREV1OR2OR3TAG") == 0) {
 	      strcpy(tag, split_ptr[3]);
-	    } 
+	    }
 	    else if (strcmp(when, "NEXTWD") == 0 ||
 		strcmp(when, "NEXT2WD") == 0 ||
 		strcmp(when, "NEXT1OR2WD") == 0 ||
@@ -168,31 +168,31 @@ int main(int             argc, char           *argv[])
 	    } else if (strcmp(when,"LBIGRAM") == 0||
 		       strcmp(when,"WDPREVTAG") == 0) {
 	      strcpy(prev1,split_ptr[3]);
-	      strcpy(word,split_ptr[4]); 
+	      strcpy(word,split_ptr[4]);
 	    } else if (strcmp(when,"RBIGRAM") == 0 ||
 		       strcmp(when,"WDNEXTTAG") == 0) {
 	      strcpy(word,split_ptr[3]);
-	      strcpy(next1,split_ptr[4]); 
+	      strcpy(next1,split_ptr[4]);
 	    }
 
-		     
-	    
+
+
 	    for (count = 0; count <= corpus_size; ++count) {
 	      strcpy(curtag, (char *) (char *)Darray_get(tag_corpus_array, count));
 	      if (strcmp(old,first_tag_nospace(curtag)) == 0
 		  && ! is_tagged_with(neww,curtag)) {
 		strcpy(curwd,(char *)(char *)Darray_get(word_corpus_array,count));
 		sprintf(atempstr2,"%s %s",curwd,neww);
-		
+
 		if (! Registry_get(WORDS,curwd) ||
 		    Registry_get(SEENTAGGING,atempstr2)) {
 		  if (strcmp(when,"ALWAYS") == 0) {
 		    strcat(curtag,"_");
 		    strcat(curtag,neww);
 		    curtagcpy = mystrdup(curtag);
-		    Darray_set(tag_corpus_array, count, curtagcpy); 
+		    Darray_set(tag_corpus_array, count, curtagcpy);
 		  }
-		  
+
 		  else if (strcmp(when, "SURROUNDTAG") == 0) {
 		    if (count < corpus_size && count > 0) {
 		    if (strcmp(lft, first_tag_nospace((char *)Darray_get(tag_corpus_array, count - 1))) == 0 &&
@@ -229,7 +229,7 @@ int main(int             argc, char           *argv[])
 		      curtagcpy = mystrdup(curtag);
 		      Darray_set(tag_corpus_array, count, curtagcpy);}
 		  }
-		} 
+		}
 		else if (strcmp(when, "WDNEXTTAG") == 0) {
 		  if (count < corpus_size) {
 		    if (strcmp(word, (char *)Darray_get(word_corpus_array, count)) ==
@@ -279,9 +279,9 @@ int main(int             argc, char           *argv[])
 		  }
 		} else if (strcmp(when, "NEXT1OR2TAG") == 0) {
 		  if (count < corpus_size) {
-		    if (count < corpus_size-1) 
+		    if (count < corpus_size-1)
 		      tempcount1 = count+2;
-		    else 
+		    else
 		      tempcount1 = count+1;
 		    if
 		    (strcmp(tag, first_tag_nospace((char *)Darray_get(tag_corpus_array, count + 1))) == 0 ||
@@ -293,9 +293,9 @@ int main(int             argc, char           *argv[])
 		  }
 		}  else if (strcmp(when, "NEXT1OR2WD") == 0) {
 		  if (count < corpus_size) {
-		    if (count < corpus_size-1) 
+		    if (count < corpus_size-1)
 		      tempcount1 = count+2;
-		    else 
+		    else
 		      tempcount1 = count+1;
 		    if
 		    (strcmp(word, (char *)Darray_get(word_corpus_array, count + 1)) == 0 ||
@@ -309,11 +309,11 @@ int main(int             argc, char           *argv[])
 		  if (count < corpus_size) {
 		    if (count < corpus_size -1)
 		      tempcount1 = count+2;
-		    else 
+		    else
 		      tempcount1 = count+1;
 		    if (count < corpus_size-2)
 		      tempcount2 = count+3;
-		    else 
+		    else
 		      tempcount2 =count+1;
 		    if
 		      (strcmp(tag, first_tag_nospace((char *)Darray_get(tag_corpus_array, count + 1))) == 0 ||
@@ -328,11 +328,11 @@ int main(int             argc, char           *argv[])
 		  if (count < corpus_size) {
 		    if (count < corpus_size -1)
 		      tempcount1 = count+2;
-		    else 
+		    else
 		      tempcount1 = count+1;
 		    if (count < corpus_size-2)
 		      tempcount2 = count+3;
-		    else 
+		    else
 		      tempcount2 =count+1;
 		    if
 		      (strcmp(word, (char *)Darray_get(word_corpus_array, count + 1)) == 0 ||
@@ -403,7 +403,7 @@ int main(int             argc, char           *argv[])
 		  }
 		} else if (strcmp(when, "PREV1OR2TAG") == 0) {
 		  if (count > 0) {
-		    if (count > 1) 
+		    if (count > 1)
 		      tempcount1 = count-2;
 		    else
 		      tempcount1 = count-1;
@@ -416,7 +416,7 @@ int main(int             argc, char           *argv[])
 		  }
 		} else if (strcmp(when, "PREV1OR2WD") == 0) {
 		  if (count > 0) {
-		    if (count > 1) 
+		    if (count > 1)
 		      tempcount1 = count-2;
 		    else
 		      tempcount1 = count-1;
@@ -429,13 +429,13 @@ int main(int             argc, char           *argv[])
 		  }
 		} else if (strcmp(when, "PREV1OR2OR3TAG") == 0) {
 		  if (count > 0) {
-		    if (count>1) 
+		    if (count>1)
 		      tempcount1 = count-2;
-		    else 
+		    else
 		      tempcount1 = count-1;
-		    if (count >2) 
+		    if (count >2)
 		      tempcount2 = count-3;
-		    else 
+		    else
 		      tempcount2 = count-1;
 		    if (strcmp(tag, first_tag_nospace((char *)Darray_get(tag_corpus_array, count - 1))) == 0 ||
 			strcmp(tag, first_tag_nospace((char *)Darray_get(tag_corpus_array, tempcount1))) == 0 ||
@@ -447,13 +447,13 @@ int main(int             argc, char           *argv[])
 		  }
 		} else if (strcmp(when, "PREV1OR2OR3WD") == 0) {
 		  if (count > 0) {
-		    if (count>1) 
+		    if (count>1)
 		      tempcount1 = count-2;
-		    else 
+		    else
 		      tempcount1 = count-1;
-		    if (count >2) 
+		    if (count >2)
 		      tempcount2 = count-3;
-		    else 
+		    else
 		      tempcount2 = count-1;
 		    if (strcmp(word, (char *)Darray_get(word_corpus_array, count - 1)) == 0 ||
 			strcmp(word, (char *)Darray_get(word_corpus_array, tempcount1)) == 0 ||
@@ -473,12 +473,12 @@ int main(int             argc, char           *argv[])
 		      Darray_set(tag_corpus_array, count, curtagcpy);}
 		  }
 		}
-		else 
+		else
 		  fprintf(stderr,
 			  "ERROR: %s is not an allowable transform type\n",
 			  when);
 	      }
-	    
+
 	    }
 	    }
 	    free(split_ptr);

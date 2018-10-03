@@ -2,22 +2,19 @@
 #define FST_H
 
 #include "XMLtext.h"
-#include "registry.h"
+#include "newregistry.h"
 #include "defines.h"
 #include <iostream>
 
 struct optionStruct;
 
-int final_state_tagger(  const char * Contextualrulefile
+int final_state_tagger(const char* Contextualrulefile,
 #if RESTRICT_MOVE
-#if WITHSEENTAGGING
-                       , Registry SEENTAGGING
+#	if WITHSEENTAGGING
+  Registry SEENTAGGING,
+#	endif
+  NewRegistry& WORDS,
 #endif
-                       , NewRegistry& WORDS
-#endif
-                       , text * Corpus
-                       , optionStruct * Options
-                       , std::ostream & fpout
-                       );
+  text* Corpus, optionStruct* Options, std::ostream& fpout);
 
 #endif

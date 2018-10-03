@@ -16,7 +16,7 @@
 #include "useful.h"
 
 #define GUESSNUMWORDS 100000 /* guess at number of words in LEXICON*/
-#define NUMTAGS 100  
+#define NUMTAGS 100
 #define NUMWDS  300
 #define THRESHOLD 0.0
 #define MAXTAGLEN 70
@@ -48,7 +48,7 @@ int is_tagged_with(char *tag,char * tagseq)
   temp = mystrdup(tagseq);
   temp2 = strtok(temp,"_");
   while (temp2 != NULL &&
-	 strcmp(temp2,tag) != 0) 
+	 strcmp(temp2,tag) != 0)
     temp2 = strtok(NULL,"_");
   if (temp2 == NULL ){ free(temp); return(0);}
   else { free(temp); return(1); }
@@ -63,7 +63,7 @@ char *first_tag(char *tagstr)
   temp  = mystrdup(tagstr);
   temp2 = strtok(temp,"_");
   temp3 = mystrdup(temp2);
-  free(temp); 
+  free(temp);
   return(temp3);
 }
 
@@ -75,7 +75,7 @@ char *first_tag_nospace(char *tagstr)
   temp  = mystrdup(tagstr);
   temp2 = strtok(temp,"_");
   strcpy(globalstring,temp2);
-  free(temp); 
+  free(temp);
   return(globalstring);
 }
 
@@ -87,12 +87,12 @@ void increment_array(Registry *thehash,char  *thestr)
 
 
   if ((numforhash = (int *)Registry_get(*thehash,thestr)) != NULL) {
-    (*numforhash)++; 
+    (*numforhash)++;
   }
   else {
     numforhash = (int *)malloc(sizeof(int));
     *numforhash = 1;
-    Registry_add(*thehash,thestr, (int *)numforhash); 
+    Registry_add(*thehash,thestr, (int *)numforhash);
   }
 }
 /***********************************************************************/
@@ -102,14 +102,14 @@ void increment_array_create(Registry *thehash,char  *thestr)
 
 
   if ((numforhash = (int *)Registry_get(*thehash,thestr)) != NULL) {
-    (*numforhash)++; 
+    (*numforhash)++;
   }
   else {
     numforhash = (int *)malloc(sizeof(int));
     *numforhash = 1;
     tempforcreate = (char*)malloc((1+strlen(thestr))*sizeof(char));
     strcpy(tempforcreate,thestr);
-    Registry_add(*thehash,tempforcreate,(int *)numforhash); 
+    Registry_add(*thehash,tempforcreate,(int *)numforhash);
   }
 }
 /***********************************************************************/
@@ -121,7 +121,7 @@ void check_counts(Registry *goodhash,Registry *badhash,char *label)
   float hashtempval2;
   float  tempbest;
   int FREEFLAG;
-  
+
   FREEFLAG = 0;
 
   if (strcmp(label,"PREVBIGRAM") == 0 ||
@@ -138,7 +138,7 @@ void check_counts(Registry *goodhash,Registry *badhash,char *label)
       strcmp(label,"PREV2TAG") == 0 ||
       strcmp(label,"PREV1OR2TAG") == 0 ||
       strcmp(label,"PREV1OR2OR3TAG") == 0 ||
-      strcmp(label,"SURROUNDTAG") == 0) 
+      strcmp(label,"SURROUNDTAG") == 0)
     FREEFLAG = 1;
 
   tempkey = Darray_create();
@@ -155,7 +155,7 @@ void check_counts(Registry *goodhash,Registry *badhash,char *label)
   for (tempcount=0;tempcount<Darray_len(tempkey);++tempcount) {
 
       hashtempstr  = (int *)Registry_get(*badhash,(char *)Darray_get(tempkey,tempcount));
-      if (hashtempstr == NULL) 
+      if (hashtempstr == NULL)
 	hashtempval  =  0;
       else
 	hashtempval = *hashtempstr;
@@ -167,17 +167,17 @@ void check_counts(Registry *goodhash,Registry *badhash,char *label)
 	  tempbest < 1.0) {
 	localbest = tempbest;
 	sprintf(localdif,"%d %f",*(int *)(char *)Darray_get(tempval,tempcount),hashtempval2);
-	sprintf(localbestthing,"%s %s %s %s",wrong,right,label,(char *)Darray_get(tempkey,tempcount)); 
+	sprintf(localbestthing,"%s %s %s %s",wrong,right,label,(char *)Darray_get(tempkey,tempcount));
       }}
       free((char *)Darray_get(tempval,tempcount));
       if (FREEFLAG)
 	      free((char *)Darray_get(tempkey,tempcount));
-	     
+
     }
     for (tempcount=0;tempcount<Darray_len(temp2key);++tempcount) {
-       free((char *)Darray_get(temp2val,tempcount)); 
+       free((char *)Darray_get(temp2val,tempcount));
        if (FREEFLAG)
-	        free((char *)Darray_get(temp2key,tempcount)); 
+	        free((char *)Darray_get(temp2key,tempcount));
     }
     Darray_destroy(tempval);
     Darray_destroy(temp2val);
@@ -310,11 +310,11 @@ while(CONTINUE > THRESHOLD) {
   Darray_hint(guess_tag_corpus,100,400000);
   guess_file  = fopen(argv[2],"r");
   while(fgets(line,sizeof(line),guess_file) != NULL) {
-    
+
     Darray_addh(guess_tag_corpus,staart);
     Darray_addh(guess_tag_corpus,staart);
     line[strlen(line)-1] = '\0';
-    split_ptr = perl_split_independent(line); 
+    split_ptr = perl_split_independent(line);
     split_ptr2 = split_ptr;
     while (*split_ptr != NULL) {
       tempstr = strtok(*split_ptr,"/");
@@ -343,18 +343,18 @@ printf("READ IN BAD FILE\n");
   printscore=0;
   for(count=0;count<Darray_len(guess_tag_corpus);++count) {
     if
-      (! is_tagged_with((char *)Darray_get(correct_tag_corpus,count),(char *)Darray_get(guess_tag_corpus,count))) { 
-	++printscore; 
+      (! is_tagged_with((char *)Darray_get(correct_tag_corpus,count),(char *)Darray_get(guess_tag_corpus,count))) {
+	++printscore;
 	freshcharvar =
 	  mystrdup(first_tag_nospace((char *)Darray_get(guess_tag_corpus,count)));
 	sprintf(forpasting,"%s %s",freshcharvar,
 		                       (char *)Darray_get(correct_tag_corpus,count));
 	increment_array_create(&errorlistcount,forpasting);
-      } 
+      }
   }
 
   error_list = fopen("AANEWRESTRJUNKKK","a");
-  Registry_fetch_contents(errorlistcount,temperrorkey,temperrorval);  
+  Registry_fetch_contents(errorlistcount,temperrorkey,temperrorval);
   for (count=0;count<Darray_len(temperrorkey);++count) {
     if (*(int *)(char *)Darray_get(temperrorval,count) > THRESHOLD)
       /*Darray_addh(errorlist,tempstr);*/
@@ -370,23 +370,23 @@ printf("READ IN BAD FILE\n");
 
   printf("NUM ERRORS: %d\n",printscore);
 /* shoud sort error list !!!!!!!*/
-  
+
   system("cat AANEWRESTRJUNKKK | sort -rn > AANEWRESTRJUNKKK2");
   system("mv AANEWRESTRJUNKKK2 AANEWRESTRJUNKKK");
-  
+
   error_list = fopen("AANEWRESTRJUNKKK","r");
   while(fgets(line,sizeof(line),error_list) != NULL) {
     line[strlen(line)-1] = '\0';
     tempstr = mystrdup(line);
-    Darray_addh(errorlist,tempstr); 
+    Darray_addh(errorlist,tempstr);
   }
   fclose(error_list);
   system("/bin/rm AANEWRESTRJUNKKK");
 
   globalbest= 0;
   strcpy(globalprint,"");
-  
-  
+
+
   for (count=0;count<Darray_len(errorlist);++count) {
 
     localbest =0;
@@ -399,7 +399,7 @@ printf("READ IN BAD FILE\n");
     right = split_ptr[2];
     numwrong = atoi(split_ptr[0]);
     if (numwrong > THRESHOLD3) {
-      
+
       printf("WRONG,RI: %s %s\n",wrong,right);
       printf("GLOBALBEST, GLOBALPRINT, GLOBALDIF: %f %s %s\n",globalbest,globalprint,globaldif);
 
@@ -455,12 +455,12 @@ printf("READ IN BAD FILE\n");
       for(count2=0;count2<lengthcount;++count2){
 	sprintf(atempstr2,"%s %s",(char *)Darray_get(word_corpus,count2),right);
 	if (Registry_get(WORDS,(char *)Darray_get(word_corpus,count2)) &&
-	    ! Registry_get(SEENTAGGING,atempstr2)) 
+	    ! Registry_get(SEENTAGGING,atempstr2))
 	  strcpy(flag,"NOMATCH");
-	else if 
+	else if
 	  (strcmp((char *)Darray_get(correct_tag_corpus,count2),right) == 0 &&
 	   (strcmp
-	    (first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2)),wrong) 
+	    (first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2)),wrong)
 	    ==  0)
 	    &&
 	    (! is_tagged_with(right,(char *)Darray_get(guess_tag_corpus,count2))))
@@ -468,14 +468,14 @@ printf("READ IN BAD FILE\n");
 	else if
 	  (strcmp((char *)Darray_get(correct_tag_corpus,count2),right) != 0 &&
 	   (strcmp
-	    (first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2)),wrong) 
+	    (first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2)),wrong)
 	    ==  0)
 	   &&
 	   (! is_tagged_with(right,(char *)Darray_get(guess_tag_corpus,count2))))
 	  strcpy(flag,"GOODMATCH");
-	else 
+	else
 	  strcpy(flag,"NOMATCH");
-	
+
 	if (strcmp(flag,"BADMATCH") == 0) {
 	  increment_array(&always,"DUMMY");
 	  increment_array(&currentwd,(char *)Darray_get(word_corpus,count2));
@@ -514,7 +514,7 @@ printf("READ IN BAD FILE\n");
 	    {
 	      increment_array_create(&next1or2tag,
 		  first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2+2)));
-	      
+
 	      increment_array_create(&next1or2or3tag,
 		  first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2+2)));
 	    }
@@ -562,7 +562,7 @@ printf("READ IN BAD FILE\n");
 	    increment_array_create(&prev2tag,first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2-2)));
 	    increment_array(&prev2wd,(char *)Darray_get(word_corpus,count2-2));
 	    if (strcmp(first_tag_nospace(
-		 (char *)Darray_get(guess_tag_corpus,count2-2)),onetagbfr) != 0){ 
+		 (char *)Darray_get(guess_tag_corpus,count2-2)),onetagbfr) != 0){
 	      increment_array_create(&prev1or2tag,
 				     first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2-2)));
 	      increment_array_create(&prev1or2or3tag,
@@ -621,7 +621,7 @@ printf("READ IN BAD FILE\n");
 	      increment_array(&next1or2wd2,(char *)Darray_get(word_corpus,count2+2));
 	  }
 	  if (count2 < lengthcount-3) {
-	    if (strcmp(first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2+3)),onetagaft) !=0 
+	    if (strcmp(first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2+3)),onetagaft) !=0
 		&&
 		strcmp(first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2+3)),twotagaft) !=0 )
 	      increment_array_create(&next1or2or3tag2,
@@ -651,7 +651,7 @@ printf("READ IN BAD FILE\n");
       increment_array_create(&surroundtag2,forpasting);
 	    }
 	  }
-	  if (count2 >1 ) { 
+	  if (count2 >1 ) {
 	    strcpy(twotagbfr,first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2-2)));
 	    strcpy(forpasting2,
 		   first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2-2)));
@@ -670,14 +670,14 @@ printf("READ IN BAD FILE\n");
 	      increment_array(&prev1or2wd2,(char *)Darray_get(word_corpus,count2-2));
 	  }
 	  if (count2 > 2) {
-	    if (strcmp(first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2-3)),onetagbfr) != 0 
+	    if (strcmp(first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2-3)),onetagbfr) != 0
 		&&
 		strcmp(first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2-3)),twotagbfr) != 0)
 	      increment_array_create(&prev1or2or3tag2,
 			    first_tag_nospace((char *)Darray_get(guess_tag_corpus,count2-3)));
 	  }
 	}
-      }  
+      }
 
 
 check_counts(&always,&always2,"ALWAYS");
@@ -717,21 +717,21 @@ check_counts(&prev2wd,&prev2wd2,"PREV2WD");
   free(split_ptr[2]);
   free(split_ptr);
   for (count=0;count<strlen(globalprint);++count)
-    if (*(globalprint+count) == '\'') 
-      *(globalprint+count) = '\b'; 
+    if (*(globalprint+count) == '\'')
+      *(globalprint+count) = '\b';
   sprintf(systemcall,"cat %s | fix-kbest-rule-learn \'%s\' %s > aanewmynewtagggs",
 	  argv[2],globalprint,argv[4]);
   system(systemcall);
   for (count=0;count<strlen(globalprint);++count)
-    if (*(globalprint+count) == '\b') 
-      *(globalprint+count) = '\''; 
+    if (*(globalprint+count) == '\b')
+      *(globalprint+count) = '\'';
   sprintf(systemcall,"mv aanewmynewtagggs %s",argv[2]);
   system(systemcall);
   correct_out = fopen(argv[3],"a");
   fprintf(correct_out,"%s\n",globalprint);
 /*  fprintf(correct_out,"%d %s %s\n",globalbest,globalprint,globaldif);*/
   fclose(correct_out);
-  CONTINUE = globalbest; 
+  CONTINUE = globalbest;
   for (count=0;count<Darray_len(guess_tag_corpus);++count)
     if (strcmp((tempstr=(char *)Darray_get(guess_tag_corpus,count)),"STAART") != 0)
       free(tempstr);
@@ -739,7 +739,7 @@ check_counts(&prev2wd,&prev2wd2,"PREV2WD");
   for (count=0;count<Darray_len(errorlist);++count)
     free((char *)Darray_get(errorlist,count));
   Darray_destroy(errorlist);
-	 
+
 }
 return 0;
 }

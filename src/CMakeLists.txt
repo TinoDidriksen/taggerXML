@@ -13,11 +13,11 @@ endif()
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
+find_package(lmdb CONFIG REQUIRED)
+
 set(TAGGERXML_HEADERS
 	argopt.h
 	bool.h
-	darray.h
-	darrayP.h
 	defines.h
 	field.h
 	fst.h
@@ -27,8 +27,7 @@ set(TAGGERXML_HEADERS
 	option.h
 	"${CMAKE_SOURCE_DIR}/deps/parsesgml/src/parsesgml.h"
 	readcorpus.h
-	registry.h
-	registryP.h
+	newregistry.h
 	sst.h
 	staart.h
 	substring.h
@@ -40,11 +39,11 @@ set(TAGGERXML_HEADERS
 	word.h
 	writcorp.h
 	XMLtext.h
+	"${CMAKE_SOURCE_DIR}/deps/lmdb++.h"
 	)
 
 set(TAGGERXML_SOURCES
 	argopt.cpp
-	darray.cpp
 	field.cpp
 	fst.cpp
 	"${CMAKE_SOURCE_DIR}/deps/hashmap/src/hashmap.cpp"
@@ -52,11 +51,9 @@ set(TAGGERXML_SOURCES
 	"${CMAKE_SOURCE_DIR}/deps/letterfunc/src/letterfunc.cpp"
 	lex.cpp
 	main.cpp
-	memory.cpp
 	option.cpp
 	"${CMAKE_SOURCE_DIR}/deps/parsesgml/src/parsesgml.cpp"
 	readcorpus.cpp
-	registry.cpp
 	sst.cpp
 	substring.cpp
 	tagger.cpp
@@ -69,12 +66,15 @@ set(TAGGERXML_SOURCES
 	)
 
 include_directories(
+	${LMDB_INCLUDE_DIR}
 	"${CMAKE_SOURCE_DIR}/src"
+	"${CMAKE_SOURCE_DIR}/deps"
 	"${CMAKE_SOURCE_DIR}/deps/hashmap/src"
 	"${CMAKE_SOURCE_DIR}/deps/letterfunc/src"
 	"${CMAKE_SOURCE_DIR}/deps/parsesgml/src"
 	)
 
 add_executable(taggerXML ${TAGGERXML_SOURCES})
+target_link_libraries(taggerXML PRIVATE lmdb)
 
 install(TARGETS taggerXML RUNTIME DESTINATION bin)

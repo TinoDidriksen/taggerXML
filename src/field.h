@@ -29,169 +29,160 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <stdlib.h> // gcc: size_t
 
 namespace {
-    char _empty[] = "";
+char _empty[] = "";
 }
 
-class field
-    {
+class field {
 #ifdef COUNTOBJECTS
-    public:
-        static int COUNT;
+public:
+	static int COUNT;
 #endif
-    protected:
-        field * next;
-    public:
-        virtual const char * isA() = 0; //20080213
-        field();
-        virtual ~field()
-            {
-            delete next;
+protected:
+	field* next;
+
+public:
+	virtual const char* isA() = 0; //20080213
+	field();
+	virtual ~field() {
+		delete next;
 #ifdef COUNTOBJECTS
-            --COUNT;
+		--COUNT;
 #endif
-            };
-        virtual char * read(char * kar,field *& nextfield) = 0; // return NULL : kar accepted 
-        void addField(field * fld)
-            {
-            if(next)
-                next->addField(fld);
-            else
-                next = fld;
-            }
-        virtual void add(char /*kar*/){}
-        virtual char * getString();
-        virtual void reset(){if(next)next->reset();}
-    };
+	};
+	virtual char* read(char* kar, field*& nextfield) = 0; // return NULL : kar accepted
+	void addField(field* fld) {
+		if (next) {
+			next->addField(fld);
+		}
+		else {
+			next = fld;
+		}
+	}
+	virtual void add(char /*kar*/) {}
+	virtual char* getString();
+	virtual void reset() {
+		if (next) {
+			next->reset();
+		}
+	}
+};
 
-class readValue : public field
-    {
-    private:
-        char * word;
-        size_t len;
-        int pos;
-    public:
-        const char * isA() //20080213
-            {
-            return "Value";
-            }
-        readValue()
-            {
-            len = 20;
-            word = new char[len];
-            word[0] = '\0';
-            pos = 0;
-            }
-        ~readValue()
-            {
-            delete word;
-            }
-        void reset()
-            {
-            pos = 0;
-            field::reset();
-            }
+class readValue : public field {
+private:
+	char* word;
+	size_t len;
+	int pos;
 
-        char * getString()
-            {
-            if(pos == 0)
-                return _empty;
-            return word;
-            }
-        virtual char * read(char * kar,field *& nextfield);
-    };
+public:
+	const char* isA() { //20080213
+		return "Value";
+	}
+	readValue() {
+		len = 20;
+		word = new char[len];
+		word[0] = '\0';
+		pos = 0;
+	}
+	~readValue() {
+		delete word;
+	}
+	void reset() {
+		pos = 0;
+		field::reset();
+	}
 
-class readWhiteSpace : public field
-    {
+	char* getString() {
+		if (pos == 0) {
+			return _empty;
+		}
+		return word;
+	}
+	virtual char* read(char* kar, field*& nextfield);
+};
+
+class readWhiteSpace : public field {
 #ifdef COUNTOBJECTS
-    public:
-        static int COUNT;
+public:
+	static int COUNT;
 #endif
-    private:
-        bool found;
-    public:
-        const char * isA() //20080213
-            {
-            return "WhiteSpace";
-            }
-        readWhiteSpace():found(false){}
-        ~readWhiteSpace(){}
-        virtual char * read(char * kar,field *& nextfield);
-        void reset()
-            {
-            found = false;
-            field::reset();
-            }
-    };
+private:
+	bool found;
 
-class readAllButWhiteSpace : public field
-    {
-    private:
-        bool found;
-    public:
-        const char * isA() //20080213
-            {
-            return "AllButWhiteSpace";
-            }
-        readAllButWhiteSpace():found(false){}
-        ~readAllButWhiteSpace(){}
-        virtual char * read(char * kar,field *& nextfield);
-        void reset()
-            {
-            found = false;
-            field::reset();
-            }
-    };
+public:
+	const char* isA() { //20080213
+		return "WhiteSpace";
+	}
+	readWhiteSpace()
+	  : found(false) {}
+	~readWhiteSpace() {}
+	virtual char* read(char* kar, field*& nextfield);
+	void reset() {
+		found = false;
+		field::reset();
+	}
+};
 
-class readTab : public field
-    {
-    public:
-        const char * isA() //20080213
-            {
-            return "Tab";
-            }
-        readTab(){}
-        ~readTab(){}
-        virtual char * read(char * kar,field *& nextfield);
-    };
+class readAllButWhiteSpace : public field {
+private:
+	bool found;
 
-class readNewLine : public field
-    {
-    public:
-        const char * isA() //20080213
-            {
-            return "NewLine";
-            }
-        readNewLine(){}
-        ~readNewLine(){}
-        virtual char * read(char * kar,field *& nextfield);
-    };
+public:
+	const char* isA() { //20080213
+		return "AllButWhiteSpace";
+	}
+	readAllButWhiteSpace()
+	  : found(false) {}
+	~readAllButWhiteSpace() {}
+	virtual char* read(char* kar, field*& nextfield);
+	void reset() {
+		found = false;
+		field::reset();
+	}
+};
 
-class readLitteral : public field
-    {
-    private:
-        char * litteral;
-        char * matched;
-        char * giveback;
-        int len;
-        int pos;
-        int givebacklen;
-    public:
-        const char * isA() //20080213
-            {
-            return "Litteral";
-            }
-        readLitteral(char first);
-        ~readLitteral()
-            {
-            delete litteral;
-            delete giveback;
-            }
-        void add(char kar);
-        virtual char * read(char * kar,field *& nextfield);
-        void reset()
-            {
-            pos = 0;
-            field::reset();
-            }
-    };
+class readTab : public field {
+public:
+	const char* isA() { //20080213
+		return "Tab";
+	}
+	readTab() {}
+	~readTab() {}
+	virtual char* read(char* kar, field*& nextfield);
+};
+
+class readNewLine : public field {
+public:
+	const char* isA() { //20080213
+		return "NewLine";
+	}
+	readNewLine() {}
+	~readNewLine() {}
+	virtual char* read(char* kar, field*& nextfield);
+};
+
+class readLitteral : public field {
+private:
+	char* litteral;
+	char* matched;
+	char* giveback;
+	int len;
+	int pos;
+	int givebacklen;
+
+public:
+	const char* isA() { //20080213
+		return "Litteral";
+	}
+	readLitteral(char first);
+	~readLitteral() {
+		delete litteral;
+		delete giveback;
+	}
+	void add(char kar);
+	virtual char* read(char* kar, field*& nextfield);
+	void reset() {
+		pos = 0;
+		field::reset();
+	}
+};
 #endif

@@ -5,7 +5,7 @@
 
 //extern char * line;
 //extern int linelen;
-char * mygets(); 
+char * mygets();
 
 #endif
 

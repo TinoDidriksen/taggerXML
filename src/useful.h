@@ -4,53 +4,53 @@
 #include "sysdep.h"
 
 #ifndef NULL
-#define NULL 0
+#	define NULL 0
 #endif
 
 #ifndef TRUE
-#define TRUE (!NULL)
+#	define TRUE (!NULL)
 #endif
 
 #ifndef FALSE
-#define FALSE NULL
+#	define FALSE NULL
 #endif
 
 #ifndef USHORT
-#define USHORT unsigned short
+#	define USHORT unsigned short
 #endif
 
 #ifndef ULONG
-#define ULONG unsigned long
+#	define ULONG unsigned long
 #endif
 
 #ifndef MAX
-#define MAX(x, y) (x >= y ? x : y)
+#	define MAX(x, y) (x >= y ? x : y)
 #endif
 
 #ifndef MIN
-#define MIN(x, y) (x <= y ? x : y)
+#	define MIN(x, y) (x <= y ? x : y)
 #endif
 
 #ifndef ABS
-#define ABS(x) (x < 0 ? x * (-1) : x)
+#	define ABS(x) (x < 0 ? x * (-1) : x)
 #endif
 
-extern int strcmp_nocase( const char *string1, const char *string2 );
+extern int strcmp_nocase(const char* string1, const char* string2);
 //extern const char * uncapitalize(const char * word);
-extern char * dupl(const char * s);
-extern char * mystrdup(const char *);
-     /* Just a hack around the fact that strdup isn't standard */
-extern int not_just_blank(char *);
-    /* make sure we aren't processing a blank line */
-extern int num_words(char *);
-    /* returns number of words in a string */
+extern char* dupl(const char* s);
+extern char* mystrdup(const char*);
+/* Just a hack around the fact that strdup isn't standard */
+extern int not_just_blank(char*);
+/* make sure we aren't processing a blank line */
+extern int num_words(char*);
+/* returns number of words in a string */
 
 /* Set 'product' to the name of the environment variable that contains (part
    of the) path to the options file, not including the file name itself.
    If NULL, a file named 'xoptions' is assumed to be in the current working
    directory. 
    Default value: NULL*/
-extern char * product;
+extern char* product;
 /* Set 'relative_path_to_xoptions' to the path to the options file, including
    the file name itself and relative to the value stored in the <product>
    environment variable. 
@@ -58,11 +58,11 @@ extern char * product;
    specified in the <product> environment varaible. (or in the CWD, if 
    product == NULL.
    Default value: NULL */
-extern char * relative_path_to_xoptions;
-extern char * xoptions;
+extern char* relative_path_to_xoptions;
+extern char* xoptions;
 
-long option(const char * key); 
-char * coption(const char * key); 
+long option(const char* key);
+char* coption(const char* key);
 
 // Bart 20030225:
 /*

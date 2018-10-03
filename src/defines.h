@@ -10,7 +10,7 @@
 			     performance might be obtained by setting this to
 			     0, but for most uses it should be set to 1 */
 #define WITHSEENTAGGING 0 // Bart Jongejan 20050815. Save a hash table and some time on reading a large lexicon.
-#define WITHWORDS 0 // Bart Jongejan 20050816. Save a hash table and some time on reading a large lexicon.
+#define WITHWORDS 0       // Bart Jongejan 20050816. Save a hash table and some time on reading a large lexicon.
 // It should make no difference wether one chooses WITHSEENTAGGING 0 and WITHWORDS 0 or WITHSEENTAGGING 1 and WITHWORDS 1.
 // If it does, the lexicon probably has multiple lines for the same word, which is an error. (Bart 20090831)
 #define MAXWORDLEN 512 /* max char length of words */

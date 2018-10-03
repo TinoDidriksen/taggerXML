@@ -20,23 +20,21 @@
 #endif
 */
 
-class tagger
-    {
-    private:
-    public:
-        tagger();
-        bool init(
-                const char * Lexicon,
-                const char * Bigrams,
-                const char * Lexicalrulefile,
-                const char * Contextualrulefile,
-                //char *intermed,
-                const char * wdlistname,
-                bool START_ONLY_FLAG,
-                bool FINAL_ONLY_FLAG
-                );
-        bool analyse(std::istream & CORPUS,/*std::ostream * fintermed,*/std::ostream & fpout,optionStruct * Options);
-    };
+class tagger {
+private:
+public:
+	tagger();
+	bool init(
+	  const char* Lexicon,
+	  const char* Bigrams,
+	  const char* Lexicalrulefile,
+	  const char* Contextualrulefile,
+	  //char *intermed,
+	  const char* wdlistname,
+	  bool START_ONLY_FLAG,
+	  bool FINAL_ONLY_FLAG);
+	bool analyse(std::istream& CORPUS, /*std::ostream * fintermed,*/ std::ostream& fpout, optionStruct* Options);
+};
 
 
 #endif

@@ -23,7 +23,7 @@
 /* NUMTAGS and NUMWDS are (roughly) guesses of the max number of words
    or tags that could appear to the right of a particular tag */
 
-#define NUMTAGS 100  
+#define NUMTAGS 100
 #define NUMWDS  300
 
 
@@ -50,18 +50,18 @@ char *tempforcreate;
 	   3 = lexicon file from lexical rule corpus
 */
 /********************************************************************/
-void increment_array(Registry *thehash,char  *thestr) 
+void increment_array(Registry *thehash,char  *thestr)
 {
   int *numforhash;
 
 
   if ((numforhash = (int *)Registry_get(*thehash,thestr)) != NULL) {
-    (*numforhash)++; 
+    (*numforhash)++;
   }
   else {
     numforhash = (int *)malloc(sizeof(int));
     *numforhash = 1;
-    Registry_add(*thehash,thestr, (int *)numforhash); 
+    Registry_add(*thehash,thestr, (int *)numforhash);
   }
 }
 /***********************************************************************/
@@ -71,14 +71,14 @@ void increment_array_create(Registry *thehash,char  *thestr)
 
 
   if ((numforhash = (int *)Registry_get(*thehash,thestr)) != NULL) {
-    (*numforhash)++; 
+    (*numforhash)++;
   }
   else {
     numforhash = (int *)malloc(sizeof(int));
     *numforhash = 1;
     tempforcreate = (char *)malloc((1+strlen(thestr))*sizeof(char));
     strcpy(tempforcreate,thestr);
-    Registry_add(*thehash,tempforcreate,(int *)numforhash); 
+    Registry_add(*thehash,tempforcreate,(int *)numforhash);
   }
 }
 /***********************************************************************/
@@ -89,12 +89,12 @@ void decrement_array(Registry *thehash,char  *thestr)
 
 
   if ((numforhash = (int *)Registry_get(*thehash,thestr)) != NULL) {
-    (*numforhash)--; 
+    (*numforhash)--;
   }
   else {
     numforhash = (int *)malloc(sizeof(int));
     *numforhash = -1;
-    Registry_add(*thehash,thestr, (int *)numforhash); 
+    Registry_add(*thehash,thestr, (int *)numforhash);
   }
 }
 /***********************************************************************/
@@ -104,14 +104,14 @@ void decrement_array_create(Registry *thehash,char  *thestr)
 
 
   if ((numforhash = (int *)Registry_get(*thehash,thestr)) != NULL) {
-    (*numforhash)--; 
+    (*numforhash)--;
   }
   else {
     numforhash = (int *)malloc(sizeof(int));
     *numforhash = -1;
     tempforcreate = (char *)malloc((1+strlen(thestr))*sizeof(char));
     strcpy(tempforcreate,thestr);
-    Registry_add(*thehash,tempforcreate,(int *)numforhash); 
+    Registry_add(*thehash,tempforcreate,(int *)numforhash);
   }
 }
 /***********************************************************************/
@@ -121,7 +121,7 @@ void check_counts(Registry *goodhash,char *label)
   int tempbest;
   unsigned int tempcount;
   int FREEFLAG;
-  
+
   FREEFLAG = 0;
 
   if (strcmp(label,"PREVBIGRAM") == 0 ||
@@ -134,7 +134,7 @@ void check_counts(Registry *goodhash,char *label)
       strcmp(label,"WDAND2TAGBFR") == 0 ||
       strcmp(label,"RBIGRAM") == 0 ||
       strcmp(label,"LBIGRAM") == 0 ||
-      strcmp(label,"SURROUNDTAG") == 0) 
+      strcmp(label,"SURROUNDTAG") == 0)
     FREEFLAG = 1;
 
   tempkey = Darray_create();
@@ -146,7 +146,7 @@ void check_counts(Registry *goodhash,char *label)
   for (tempcount=0;tempcount<Darray_len(tempkey);++tempcount) {
     if ( (tempbest = *(int *)Darray_get(tempval,tempcount)) > localbest) {
       localbest = tempbest;
-      sprintf(localbestthing,"%s %s %s %s",wrong,right,label,Darray_get(tempkey,tempcount)); 
+      sprintf(localbestthing,"%s %s %s %s",wrong,right,label,Darray_get(tempkey,tempcount));
     }
     free(Darray_get(tempval,tempcount));
     if (FREEFLAG)
@@ -328,17 +328,17 @@ if (words_in_good != words_in_bad) {
   printf("%s and %s do not have the same number of words\n",argv[1],argv[2]);
   exit(0);
 }
-  
+
 /* read in the guess corpus*/
   guess_tag_corpus = (char **)malloc(sizeof(char *) * words_in_bad);
   guess_file  = fopen(argv[2],"r"); /* read in our guess-tag corpus */
   guess_tag_corpus_index = 0;
   while(fgets(line,sizeof(line),guess_file) != NULL) {
-    if (not_just_blank(line)) { 
+    if (not_just_blank(line)) {
       guess_tag_corpus[guess_tag_corpus_index++] = staart;
       guess_tag_corpus[guess_tag_corpus_index++] = staart;
       line[strlen(line)-1] = '\0';
-      split_ptr = perl_split_independent(line); 
+      split_ptr = perl_split_independent(line);
       split_ptr2 = split_ptr;
       while (*split_ptr != NULL) {
 	tempstr = strrchr(*split_ptr,'/');
@@ -362,7 +362,7 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
 				 of the best rule found drops below the
 				 THRESHOLD */
 
-/* generate and sort confusion matrix ( tag x confused for tag y 
+/* generate and sort confusion matrix ( tag x confused for tag y
    with count z */
   printf("\n");
   printf("==========BEGINNING A LEARNING ITERATION===========\n");
@@ -379,17 +379,17 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
   printscore=0;
   for(count=0;count<guess_tag_corpus_index;++count) {
     if
-      (strcmp(guess_tag_corpus[count],correct_tag_corpus[count]) 
-        != 0) { 
-	++printscore; 
+      (strcmp(guess_tag_corpus[count],correct_tag_corpus[count])
+        != 0) {
+	++printscore;
 	sprintf(forpasting,"%s %s",guess_tag_corpus[count],
 		                       correct_tag_corpus[count]);
 	increment_array_create(&errorlistcount,forpasting);
-      } 
+      }
   }
 
   error_list = fopen(tempfile1,"a");
-  Registry_fetch_contents(errorlistcount,temperrorkey,temperrorval);  
+  Registry_fetch_contents(errorlistcount,temperrorkey,temperrorval);
   for (count=0;count<Darray_len(temperrorkey);++count) {
     if (*(int *)Darray_get(temperrorval,count) > THRESHOLD)
       fprintf(error_list,"%d %s\n",*(int *)Darray_get(temperrorval,count),
@@ -409,12 +409,12 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
   system(systemcall);
   sprintf(systemcall,"mv %s %s",tempfile2,tempfile1);
   system(systemcall);
-  
+
   error_list = fopen(tempfile1,"r");
   while(fgets(line,sizeof(line),error_list) != NULL) {
     line[strlen(line)-1] = '\0';
     tempstr = mystrdup(line);
-    Darray_addh(errorlist,tempstr); 
+    Darray_addh(errorlist,tempstr);
   }
   fclose(error_list);
   sprintf(systemcall,"/bin/rm %s",tempfile1);
@@ -422,7 +422,7 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
 
   globalbest= 0;
   strcpy(globalprint,"");
-  
+
   /* for each pair of tags in the confusion matrix . . .*/
   for (count=0;count<Darray_len(errorlist);++count) {
 
@@ -435,7 +435,7 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
     right = split_ptr[2]; /* this is the good tag */
     numwrong = atoi(split_ptr[0]); /* this is the number of confusions */
     if (numwrong > globalbest) {
-      
+
       printf("From confusion matrix, tagged as: %s should be: %s\n",wrong,right);
       printf("Best rule found for this iteration so far: %d %s\n",globalbest,globalprint);
       init_hash(&curwd,NUMWDS/2);
@@ -474,15 +474,15 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
       for(count2=0;count2<lengthcount;++count2){
 	sprintf(atempstr2,"%s %s",word_corpus[count2],right);
 	if (Registry_get(WORDS,word_corpus[count2]) &&
-	    ! Registry_get(SEENTAGGING,atempstr2)) 
+	    ! Registry_get(SEENTAGGING,atempstr2))
 	  strcpy(flag,"NOMATCH");
 	else if (strcmp(guess_tag_corpus[count2],wrong) == 0 &&
-	    strcmp(correct_tag_corpus[count2],right) == 0 ) 
+	    strcmp(correct_tag_corpus[count2],right) == 0 )
 	  strcpy(flag,"BADMATCH");
 	else if (strcmp(guess_tag_corpus[count2],wrong) == 0 &&
-	    strcmp(correct_tag_corpus[count2],wrong) == 0 ) 
+	    strcmp(correct_tag_corpus[count2],wrong) == 0 )
 	  strcpy(flag,"GOODMATCH");
-	else 
+	else
 	  strcpy(flag,"NOMATCH");
 
 
@@ -522,7 +522,7 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
 	    increment_array(&next2tag,guess_tag_corpus[count2+2]);
 	    increment_array(&next2wd,word_corpus[count2+2]);
 	    if (strcmp(guess_tag_corpus[count2+2],onetagaft) != 0)
-	    { 
+	    {
 	      increment_array(&next1or2tag,
 			      guess_tag_corpus[count2+2]);
 	      increment_array(&next1or2or3tag,
@@ -574,7 +574,7 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
 	    increment_array(&prev2tag,guess_tag_corpus[count2-2]);
 	    increment_array(&prev2wd,word_corpus[count2-2]);
 	    if (strcmp(guess_tag_corpus[count2-2],onetagbfr) !=
-		0){ 
+		0){
 	      increment_array(&prev1or2tag,
 			     guess_tag_corpus[count2-2]);
 	      increment_array(&prev1or2or3tag,
@@ -636,7 +636,7 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
 	      decrement_array(&next1or2wd,word_corpus[count2+2]);
 	  }
 	  if (count2 < lengthcount-3) {
-	    if (strcmp(guess_tag_corpus[count2+3],onetagaft) !=0 
+	    if (strcmp(guess_tag_corpus[count2+3],onetagaft) !=0
 		&&
 		strcmp(guess_tag_corpus[count2+3],twotagaft) !=0 )
 	      decrement_array(&next1or2or3tag,
@@ -664,7 +664,7 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
 	      decrement_array_create(&surroundtag,forpasting);
 	    }
 	  }
-	  if (count2 >1 ) { 
+	  if (count2 >1 ) {
 	    strcpy(twotagbfr,guess_tag_corpus[count2-2]);
 	    sprintf(forpasting,"%s %s",guess_tag_corpus[count2-2],
 		                       guess_tag_corpus[count2-1]);
@@ -678,7 +678,7 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
 	    decrement_array(&prev2tag,guess_tag_corpus[count2-2]);
 	    decrement_array(&prev2wd,word_corpus[count2-2]);
 	    if (strcmp(guess_tag_corpus[count2-2],onetagbfr) != 0)
-	    { 
+	    {
 	      decrement_array(&prev1or2tag,
 			      guess_tag_corpus[count2-2]);
 	      decrement_array(&prev1or2or3tag,
@@ -687,14 +687,14 @@ while(CONTINUE > THRESHOLD) { /* this is the rule learning loop.
 	      decrement_array(&prev1or2wd,word_corpus[count2-2]);
 	  }
 	  if (count2 > 2) {
-	    if (strcmp(guess_tag_corpus[count2-3],onetagbfr) != 0 
+	    if (strcmp(guess_tag_corpus[count2-3],onetagbfr) != 0
 		&&
 		strcmp(guess_tag_corpus[count2-3],twotagbfr) != 0)
 	    decrement_array(&prev1or2or3tag,
 			    guess_tag_corpus[count2-3]);
 	  }
 	}
-      }  
+      }
 
 /* now we go through all of the contexts we've recorded, and see which */
 /* contextual trigger provides the biggest win */
@@ -737,21 +737,21 @@ check_counts(&wdand2tagbfr,"WDAND2TAGBFR");
   free(split_ptr[2]);
   free(split_ptr);
   for (count=0;count<strlen(globalprint);++count)
-    if (*(globalprint+count) == '\'') 
-      *(globalprint+count) = '\b'; 
+    if (*(globalprint+count) == '\'')
+      *(globalprint+count) = '\b';
   implement_change(globalprint,guess_tag_corpus,word_corpus,
 		   word_corpus_index,&WORDS,&SEENTAGGING);
   for (count=0;count<strlen(globalprint);++count)
-    if (*(globalprint+count) == '\b') 
-      *(globalprint+count) = '\''; 
+    if (*(globalprint+count) == '\b')
+      *(globalprint+count) = '\'';
   correct_out = fopen(argv[3],"a");
   fprintf(correct_out,"%s\n",globalprint);
   fclose(correct_out);
-  CONTINUE = globalbest; 
+  CONTINUE = globalbest;
   for (count=0;count<Darray_len(errorlist);++count)
     free(Darray_get(errorlist,count));
   Darray_destroy(errorlist);
-	 
+
 }
 return 0;
 }
@@ -781,22 +781,22 @@ Registry *wordreg,Registry *seentaggingreg
 	int             count,tempcount1,tempcount2;
         size_t          ccount;
 	char            old[100], *neww, when[300], tag[100], lft[100],
-	                rght[100], 
-	                prev1[100], prev2[100], next1[100], next2[100], 
+	                rght[100],
+	                prev1[100], prev2[100], next1[100], next2[100],
 	                curtag[100],
 	                word[300];
 	char atempstr2[256],curwd[100];
 
 	strcpy(line,thearg);
 	for (ccount=0;ccount<strlen(line);++ccount) /*patch for sing quote*/
-	  if (*(line+ccount) == '\b') 
-	    *(line+ccount) = '\''; 
+	  if (*(line+ccount) == '\b')
+	    *(line+ccount) = '\'';
 	if (strlen(line) > 1) {
 	  split_ptr = perl_split(line);
 	  strcpy(old, split_ptr[0]);
 	  neww = mystrdup(split_ptr[1]);
 	  strcpy(when, split_ptr[2]);
-	  
+
 	  if (strcmp(when, "NEXTTAG") == 0 ||
 	      strcmp(when, "NEXT2TAG") == 0 ||
 	      strcmp(when, "NEXT1OR2TAG") == 0 ||
@@ -806,9 +806,9 @@ Registry *wordreg,Registry *seentaggingreg
 	      strcmp(when, "PREV1OR2TAG") == 0 ||
 	      strcmp(when, "PREV1OR2OR3TAG") == 0) {
 	    strcpy(tag, split_ptr[3]);
-	  } 
+	  }
 	  else if (strcmp(when, "NEXTWD") == 0 ||
-		   strcmp(when,"CURWD") == 0 || 
+		   strcmp(when,"CURWD") == 0 ||
 		   strcmp(when, "NEXT2WD") == 0 ||
 		   strcmp(when, "NEXT1OR2WD") == 0 ||
 		   strcmp(when, "NEXT1OR2OR3WD") == 0 ||
@@ -830,11 +830,11 @@ Registry *wordreg,Registry *seentaggingreg
 	  } else if (strcmp(when,"LBIGRAM") == 0||
 		     strcmp(when,"WDPREVTAG") == 0) {
 	    strcpy(prev1,split_ptr[3]);
-	    strcpy(word,split_ptr[4]); 
+	    strcpy(word,split_ptr[4]);
 	  } else if (strcmp(when,"RBIGRAM") == 0 ||
 		     strcmp(when,"WDNEXTTAG") == 0) {
 	    strcpy(word,split_ptr[3]);
-	    strcpy(next1,split_ptr[4]); 
+	    strcpy(next1,split_ptr[4]);
 	  } else if (strcmp(when,"WDAND2BFR")== 0 ||
 		     strcmp(when,"WDAND2TAGBFR")== 0) {
 	    strcpy(prev2,split_ptr[3]);
@@ -843,32 +843,32 @@ Registry *wordreg,Registry *seentaggingreg
 		   strcmp(when,"WDAND2TAGAFT")== 0) {
 	    strcpy(next2,split_ptr[4]);
 	    strcpy(word,split_ptr[3]);}
-	  
+
 	  for (count = 0; count <corpuslen; ++count) {
 	    strcpy(curtag, thetagcorpus[count]);
 	    if (strcmp(curtag, old) == 0) {
 	      strcpy(curwd,thewordcorpus[count]);
 	      sprintf(atempstr2,"%s %s",curwd,neww);
-	      
+
 	      if (! Registry_get(*wordreg,curwd) ||
 		  Registry_get(*seentaggingreg,atempstr2)) {
-		
+
 		if (strcmp(when, "SURROUNDTAG") == 0) {
 		  if (count < corpuslen-1 && count > 0) {
 		    if (strcmp(lft, thetagcorpus[count - 1]) == 0 &&
-			strcmp(rght, thetagcorpus[count + 1]) == 0) 
+			strcmp(rght, thetagcorpus[count + 1]) == 0)
 		      change_the_tag(thetagcorpus,neww,count);
 		  }
 		} else if (strcmp(when, "NEXTTAG") == 0) {
 		  if (count < corpuslen-1) {
-		    if (strcmp(tag, thetagcorpus[count + 1]) == 0) 
+		    if (strcmp(tag, thetagcorpus[count + 1]) == 0)
 		      change_the_tag(thetagcorpus,neww,count);
 		  }
-		}  
+		}
 		else if (strcmp(when, "CURWD") == 0) {
 		  if (strcmp(word, thewordcorpus[count]) == 0)
 		      change_the_tag(thetagcorpus,neww,count);
-		}  
+		}
 		else if (strcmp(when, "NEXTWD") == 0) {
 		  if (count < corpuslen-1) {
 		    if (strcmp(word, thewordcorpus[count + 1]) == 0)
@@ -882,7 +882,7 @@ Registry *wordreg,Registry *seentaggingreg
 			0)
 		    change_the_tag(thetagcorpus,neww,count);
 		  }
-		} 
+		}
 		else if (strcmp(when, "WDNEXTTAG") == 0) {
 		  if (count < corpuslen-1) {
 		    if (strcmp(word, thewordcorpus[count]) ==
@@ -892,7 +892,7 @@ Registry *wordreg,Registry *seentaggingreg
 		      change_the_tag(thetagcorpus,neww,count);
 		  }
 		}
-		
+
 		else if (strcmp(when, "WDAND2AFT") == 0) {
 		  if (count < corpuslen-2) {
 		    if (strcmp(word, thewordcorpus[count]) ==
@@ -930,9 +930,9 @@ Registry *wordreg,Registry *seentaggingreg
 		  }
 		} else if (strcmp(when, "NEXT1OR2TAG") == 0) {
 		  if (count < corpuslen-1) {
-		    if (count < corpuslen-2) 
+		    if (count < corpuslen-2)
 		      tempcount1 = count+2;
-		    else 
+		    else
 		      tempcount1 = count+1;
 		    if
 		    (strcmp(tag, thetagcorpus[count + 1]) == 0 ||
@@ -941,9 +941,9 @@ Registry *wordreg,Registry *seentaggingreg
 		  }
 		}  else if (strcmp(when, "NEXT1OR2WD") == 0) {
 		  if (count < corpuslen-1) {
-		    if (count < corpuslen-2) 
+		    if (count < corpuslen-2)
 		      tempcount1 = count+2;
-		    else 
+		    else
 		      tempcount1 = count+1;
 		    if
 		    (strcmp(word, thewordcorpus[count + 1]) == 0 ||
@@ -954,11 +954,11 @@ Registry *wordreg,Registry *seentaggingreg
 		  if (count < corpuslen-1) {
 		    if (count < corpuslen-2)
 		      tempcount1 = count+2;
-		    else 
+		    else
 		      tempcount1 = count+1;
 		    if (count < corpuslen-3)
 		      tempcount2 = count+3;
-		    else 
+		    else
 		      tempcount2 =count+1;
 		    if
 		      (strcmp(tag, thetagcorpus[count + 1]) == 0 ||
@@ -970,11 +970,11 @@ Registry *wordreg,Registry *seentaggingreg
 		  if (count < corpuslen-1) {
 		    if (count < corpuslen-2)
 		      tempcount1 = count+2;
-		    else 
+		    else
 		      tempcount1 = count+1;
 		    if (count < corpuslen-3)
 		      tempcount2 = count+3;
-		    else 
+		    else
 		      tempcount2 =count+1;
 		    if
 		      (strcmp(word, thewordcorpus[count + 1]) == 0 ||
@@ -1042,7 +1042,7 @@ Registry *wordreg,Registry *seentaggingreg
 		  }
 		} else if (strcmp(when, "PREV1OR2TAG") == 0) {
 		  if (count > 0) {
-		    if (count > 1) 
+		    if (count > 1)
 		      tempcount1 = count-2;
 		    else
 		      tempcount1 = count-1;
@@ -1052,7 +1052,7 @@ Registry *wordreg,Registry *seentaggingreg
 		  }
 		} else if (strcmp(when, "PREV1OR2WD") == 0) {
 		  if (count > 0) {
-		    if (count > 1) 
+		    if (count > 1)
 		      tempcount1 = count-2;
 		    else
 		      tempcount1 = count-1;
@@ -1062,13 +1062,13 @@ Registry *wordreg,Registry *seentaggingreg
 		  }
 		} else if (strcmp(when, "PREV1OR2OR3TAG") == 0) {
 		  if (count > 0) {
-		    if (count>1) 
+		    if (count>1)
 		      tempcount1 = count-2;
-		    else 
+		    else
 		      tempcount1 = count-1;
-		    if (count >2) 
+		    if (count >2)
 		      tempcount2 = count-3;
-		    else 
+		    else
 		      tempcount2 = count-1;
 		    if (strcmp(tag, thetagcorpus[count - 1]) == 0 ||
 			strcmp(tag, thetagcorpus[tempcount1]) == 0 ||
@@ -1077,13 +1077,13 @@ Registry *wordreg,Registry *seentaggingreg
 		  }
 		} else if (strcmp(when, "PREV1OR2OR3WD") == 0) {
 		  if (count > 0) {
-		    if (count>1) 
+		    if (count>1)
 		      tempcount1 = count-2;
-		    else 
+		    else
 		      tempcount1 = count-1;
-		    if (count >2) 
+		    if (count >2)
 		      tempcount2 = count-3;
-		    else 
+		    else
 		      tempcount2 = count-1;
 		    if (strcmp(word, thewordcorpus[count - 1]) == 0 ||
 			strcmp(word, thewordcorpus[tempcount1]) == 0 ||
@@ -1097,7 +1097,7 @@ Registry *wordreg,Registry *seentaggingreg
 		      change_the_tag(thetagcorpus,neww,count);
 		  }
 		}
-		else 
+		else
 		  fprintf(stderr,
 			  "ERROR: %s is not an allowable transform type\n",
 			  when);

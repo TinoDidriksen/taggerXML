@@ -27,105 +27,89 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <string.h>
 #include <stdio.h>
 
-char *oldoptarg;
+char* oldoptarg;
 int oldoptind = 0;
 
-int getopt(int argc,char *argv[],char *opts)
-    {
-    static char emptystr[] = "";
+int getopt(int argc, char* argv[], char* opts) {
+	static char emptystr[] = "";
 
-    char *index;
-    int optc;
-    
-    if (!oldoptind)    /* argv[0] points to the command verb */
-        ++oldoptind;
-    if (oldoptind >= argc)
-        {
-        oldoptarg = NULL;
-        return -1;
-        }
-    
-    if ((index = argv[oldoptind]) != NULL)
-        {
-        char * optpos;
-        if (*index != '-' 
-#if defined __MSDOS__ || defined _WIN32			//if PC version
-            && *index != '/'
+	char* index;
+	int optc;
+
+	if (!oldoptind) { /* argv[0] points to the command verb */
+		++oldoptind;
+	}
+	if (oldoptind >= argc) {
+		oldoptarg = NULL;
+		return -1;
+	}
+
+	if ((index = argv[oldoptind]) != NULL) {
+		char* optpos;
+		if (*index != '-'
+#if defined __MSDOS__ || defined _WIN32 //if PC version
+		    && *index != '/'
 #endif
-            )
-            {
-            /* no option, perhaps something else ? */
-            oldoptarg = NULL;
-            return -1;
-            }
-        if (*(++index) == '-')
-            {
-            ++oldoptind;            /* double --,  end of options */
-            oldoptarg = NULL;
-            return -1;
-            }
-        if (!*index)
-            {
-                                /* single -, probably not an option */
-            oldoptarg = NULL;
-            return -1;
-            }
-        optc = *index;       /* option letter */
-        optpos = strchr(opts,optc);
-        if(optpos)
-            {
-            if(optpos[1] == ':')
-                {
-                /* this option has always data */
-                if(!*++index)
-                    {
-                    /* try next argument */
-                    for (;++oldoptind < argc && !*argv[oldoptind];);
-                    if(  oldoptind == argc
-                      || argv[oldoptind] == NULL
-                      || (   *argv[oldoptind] == '-'
-                         && *(argv[oldoptind]+1) != '\0'
-                         )
-                      )
-                        {
-                        oldoptarg = emptystr;
-                        return optc;  /* no data after all */
-                        }
-                    else
-                        {
-                        oldoptarg = argv[oldoptind++]; 
-                        if(oldoptarg[strlen(oldoptarg) - 1] == '\r') // Bart 20030806 Last argument has trailing '\r' under Linux !
-                            oldoptarg[strlen(oldoptarg) - 1] = '\0';
-                        return optc;
-                        }
-                    }
-                else
-                    {
-                    oldoptind++;
-                    oldoptarg = index; 
-                    if(oldoptarg[strlen(oldoptarg) - 1] == '\r') // Bart 20030806 Last argument has trailing '\r' under Linux !
-                        oldoptarg[strlen(oldoptarg) - 1] = '\0';
-                    return optc;
-                    }
-                }
-            else
-                {
-                oldoptind++;
-                oldoptarg = NULL; 
-                return optc;
-                }
-            }
-        else
-            {
-            oldoptind++;
-            oldoptarg = NULL; 
-            return -1;
-            }
-        }
-    else
-        {
-        oldoptind++;
-        oldoptarg = NULL;
-        return -1;
-        }
-    }
+		) {
+			/* no option, perhaps something else ? */
+			oldoptarg = NULL;
+			return -1;
+		}
+		if (*(++index) == '-') {
+			++oldoptind; /* double --,  end of options */
+			oldoptarg = NULL;
+			return -1;
+		}
+		if (!*index) {
+			/* single -, probably not an option */
+			oldoptarg = NULL;
+			return -1;
+		}
+		optc = *index; /* option letter */
+		optpos = strchr(opts, optc);
+		if (optpos) {
+			if (optpos[1] == ':') {
+				/* this option has always data */
+				if (!*++index) {
+					/* try next argument */
+					for (; ++oldoptind < argc && !*argv[oldoptind];)
+						;
+					if (oldoptind == argc || argv[oldoptind] == NULL || (*argv[oldoptind] == '-' && *(argv[oldoptind] + 1) != '\0')) {
+						oldoptarg = emptystr;
+						return optc; /* no data after all */
+					}
+					else {
+						oldoptarg = argv[oldoptind++];
+						if (oldoptarg[strlen(oldoptarg) - 1] == '\r') { // Bart 20030806 Last argument has trailing '\r' under Linux !
+							oldoptarg[strlen(oldoptarg) - 1] = '\0';
+						}
+						return optc;
+					}
+				}
+				else {
+					oldoptind++;
+					oldoptarg = index;
+					if (oldoptarg[strlen(oldoptarg) - 1] == '\r') { // Bart 20030806 Last argument has trailing '\r' under Linux !
+						oldoptarg[strlen(oldoptarg) - 1] = '\0';
+					}
+					return optc;
+				}
+			}
+			else {
+				oldoptind++;
+				oldoptarg = NULL;
+				return optc;
+			}
+		}
+		else {
+			oldoptind++;
+			oldoptarg = NULL;
+			return -1;
+		}
+	}
+	else {
+		oldoptind++;
+		oldoptarg = NULL;
+		return -1;
+	}
+}
