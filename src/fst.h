@@ -15,7 +15,7 @@ int final_state_tagger(std::string Contextualrulefile,
 #	if WITHSEENTAGGING
   Registry SEENTAGGING,
 #	endif
-  NewRegistry& WORDS,
+  lmdb::env& WORDS,
 #endif
   text* Corpus, optionStruct* Options, std::ostream& fpout);
 

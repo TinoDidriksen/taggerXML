@@ -4,6 +4,7 @@
 #include <stdlib.h> // Bart 20001218
 #include <stdio.h>  // Bart 20030224
 #include <ctype.h>  // Bart 20030225
+#include <stdexcept>
 
 /* Set 'product' to the name of the environment variable that contains (part
    of the) path to the options file, not including the file name itself.

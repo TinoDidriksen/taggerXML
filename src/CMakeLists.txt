@@ -13,7 +13,11 @@ endif()
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
-find_package(lmdb CONFIG REQUIRED)
+if(VCPKG_TOOLCHAIN)
+	find_package(lmdb CONFIG REQUIRED)
+else()
+	find_library(HAS_LMDB NAMES lmdb)
+endif()
 
 set(TAGGERXML_HEADERS
 	argopt.h

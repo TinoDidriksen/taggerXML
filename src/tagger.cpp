@@ -24,10 +24,10 @@ PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.   */
 #include <stdlib.h>
 #include <fstream>
 
-mmap_region lexicon_mmap;
+lmdb::env lexicon_mdb{ lmdb::env::create() };
+lmdb::env bigram_mdb{ lmdb::env::create() };
+lmdb::env wordlist_mdb{ lmdb::env::create() };
 mmap_region lrf_mmap;
-mmap_region bigram_mmap;
-mmap_region wordlist_mmap;
 
 static std::string Contextualrulefile;
 static bool START_ONLY_FLAG = false;
@@ -36,9 +36,6 @@ static bool FINAL_ONLY_FLAG = false;
 static int corpussize = 0;
 static int linenums = 0;
 static int tagnums = 0;
-static NewRegistry LEXICON_HASH;
-static SV2_Set BIGRAM_HASH;
-static SV_Set WORDLIST_HASH;
 static NewDarray RULE_ARRAY;
 
 #if RESTRICT_MOVE
@@ -60,9 +57,6 @@ bool createRegistries(
   Registry* WORDS,
 #	endif
 #endif
-  NewRegistry& LEXICON_HASH,
-  SV2_Set& BIGRAM_HASH,
-  SV_Set& WORDLIST_HASH,
   std::string Lexicon,
   std::string Lexicalrulefile,
   std::string Bigrams,
@@ -71,19 +65,54 @@ bool createRegistries(
   int START_ONLY_FLAG,
 #endif
   NewDarray& RULE_ARRAY) {
-	NewRegistry& lexicon_hash{ LEXICON_HASH };
-	SV2_Set& bigram_hash{ BIGRAM_HASH };
-	SV_Set& wordlist_hash{ WORDLIST_HASH };
 	NewDarray& rule_array{ RULE_ARRAY };
 
-	Lexicon = find_file(optpath, Lexicon);
-	lexicon_mmap = mmap_region{ Lexicon };
-	for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
+	auto load_data = [&](lmdb::env& env, std::string filename, auto perline) {
+		filename = find_file(optpath, filename);
+
+		struct stat _stat {};
+		stat(filename.c_str(), &_stat);
+		auto data_mdb = _stat.st_mtime;
+		auto data_size = _stat.st_size;
+
+		std::string tmp{ filename };
+		tmp.append(".mdb");
+		auto stat_err = stat(tmp.c_str(), &_stat);
+
+		env.open(tmp.c_str(), MDB_NOSUBDIR | MDB_WRITEMAP | MDB_NOSYNC, 0664);
+		env.set_mapsize(data_size * 4);
+
+		// If lexicon data file is newer or the database is empty, (re)create database
+		MDB_stat mdbs;
+		lmdb::env_stat(env, &mdbs);
+		if (stat_err != 0 || data_mdb > _stat.st_mtime || mdbs.ms_entries == 0) {
+			auto wtxn = lmdb::txn::begin(env);
+			auto dbi = lmdb::dbi::open(wtxn);
+			dbi.drop(wtxn); // Drop all existing entries, if any
+			wtxn.commit();
+
+			lmdb_writer wr(env);
+
+			auto file = mmap_region{ filename };
+			for (std::string_view line{ nextline(file) }; !line.empty(); line = nextline(file, line)) {
+				perline(wr, line);
+			}
+			wr.txn.commit();
+		}
+	};
+
+	auto load_lex = [&](lmdb_writer& wr, std::string_view line) {
+		lmdb::val key;
+		lmdb::val value;
 		auto strs = split<2>(line);
 		if (!strs[0].empty() && !strs[1].empty()) {
-			lexicon_hash.emplace(std::make_pair(strs[0], strs[1]));
+			key.assign(strs[0].data(), strs[0].size());
+			value.assign(strs[1].data(), strs[1].size());
+			wr.dbi.put(wr.txn, key, value, MDB_NODUPDATA | MDB_NOOVERWRITE);
 		}
-	}
+	};
+
+	load_data(lexicon_mdb, Lexicon, load_lex);
 
 	/* read in rule file */
 	SV_Set good_right_hash;
@@ -91,7 +120,7 @@ bool createRegistries(
 
 	Lexicalrulefile = find_file(optpath, Lexicalrulefile);
 	lrf_mmap = mmap_region{ Lexicalrulefile };
-	for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
+	for (std::string_view line{ nextline(lrf_mmap) }; !line.empty(); line = nextline(lrf_mmap, line)) {
 		auto perl_split_ptr = split<6>(line);
 		rule_array.emplace_back(perl_split_ptr);
 		if (perl_split_ptr[1].compare("goodright") == 0) {
@@ -109,25 +138,30 @@ bool createRegistries(
 	}
 
 	/* read in bigram file */
-	Bigrams = find_file(optpath, Bigrams);
-	bigram_mmap = mmap_region{ Bigrams };
-	for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
+	std::string tmp;
+	auto load_bigram = [&](lmdb_writer& wr, std::string_view line) {
 		auto bigram = split<2>(line);
-		if (good_right_hash.count(bigram[0])) {
-			bigram_hash.emplace(bigram);
+		if (good_right_hash.count(bigram[0]) || good_left_hash.count(bigram[1])) {
+			join(tmp, bigram[0], '\t', bigram[1]);
+			lmdb::val key;
+			key.assign(tmp.c_str(), tmp.size());
+			lmdb::val value{};
+			wr.dbi.put(wr.txn, key, value, MDB_NODUPDATA | MDB_NOOVERWRITE);
 		}
-		if (good_left_hash.count(bigram[1])) {
-			bigram_hash.emplace(bigram);
-		}
-	}
+	};
+
+	load_data(bigram_mdb, Bigrams, load_bigram);
 
 	if (!Wordlist.empty()) {
-		Wordlist = find_file(optpath, Wordlist);
-		wordlist_mmap = mmap_region{ Wordlist };
-		for (std::string_view line{ nextline(lexicon_mmap) }; !line.empty(); line = nextline(lexicon_mmap, line)) {
-			wordlist_hash.emplace(line);
-		}
+		auto load_words = [&](lmdb_writer& wr, std::string_view line) {
+			lmdb::val key;
+			key.assign(line.data(), line.size());
+			lmdb::val value{};
+			wr.dbi.put(wr.txn, key, value, MDB_NODUPDATA | MDB_NOOVERWRITE);
+		};
+		load_data(wordlist_mdb, Wordlist, load_words);
 	}
+
 	return true;
 }
 
@@ -144,9 +178,6 @@ tagger::tagger() {
 	WORDS = NULL;
 #	endif
 #endif
-	LEXICON_HASH.clear();
-	BIGRAM_HASH.clear();
-	WORDLIST_HASH.clear();
 	RULE_ARRAY.clear();
 }
 
@@ -179,9 +210,6 @@ bool tagger::init(
 	  &WORDS,
 #	endif
 #endif
-	  LEXICON_HASH,
-	  BIGRAM_HASH,
-	  WORDLIST_HASH,
 	  _Lexicon,
 	  _Lexicalrulefile,
 	  _Bigrams,
@@ -214,11 +242,11 @@ bool tagger::analyse(std::istream& CORPUS, std::ostream& fpout, optionStruct* Op
 	tag_hash = new hashmap::hash<strng>(&strng::key, 1000);
 	if (!FINAL_ONLY_FLAG) {
 		corpussize = -1 + start_state_tagger(
-		                    LEXICON_HASH,
+		                    lexicon_mdb,
 		                    Text,
-		                    BIGRAM_HASH,
+		                    bigram_mdb,
 		                    RULE_ARRAY,
-		                    WORDLIST_HASH,
+		                    wordlist_mdb,
 		                    Options,
 		                    tag_hash);
 	}
@@ -231,7 +259,7 @@ bool tagger::analyse(std::istream& CORPUS, std::ostream& fpout, optionStruct* Op
 #	if WITHWORDS
 		  WORDS,
 #	else
-		  LEXICON_HASH,
+		  lexicon_mdb,
 #	endif
 #endif
 		  Text, Options, fpout);

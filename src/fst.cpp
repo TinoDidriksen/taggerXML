@@ -76,7 +76,7 @@ int final_state_tagger(std::string Contextualrulefile,
 #	if WITHSEENTAGGING
   Registry SEENTAGGING,
 #	endif
-  NewRegistry& WORDS,
+  lmdb::env& WORDS,
 #endif
   text* Corpus, optionStruct* Options, std::ostream& fpout) {
 	if (Corpus->numberOfTokens <= 0) {
@@ -99,6 +99,9 @@ int final_state_tagger(std::string Contextualrulefile,
 	if (Verbose) { /* Bart 20030224*/
 		fprintf(stderr, "FINAL STATE TAGGER:: READ IN LEXICON\n");
 	}
+
+	lmdb_reader lex_rd(WORDS);
+
 	/* read in rule file, and process each rule */
 	Contextualrulefile = find_file(Options->OptionPath, Contextualrulefile);
 	mmap_region changefile_mmap{ Contextualrulefile };
@@ -176,7 +179,7 @@ int final_state_tagger(std::string Contextualrulefile,
 				    || Registry_get(SEENTAGGING, atempstr2) // SEENTAGGING contains word tag pairs
 				)
 #	else
-				auto tagsToMatch = find_or_default(WORDS, curwd); // WORDS (the Lexicon) contains word tag tag tag ... sequences
+				auto tagsToMatch = find_or_default(lex_rd, curwd); // WORDS (the Lexicon) contains word tag tag tag ... sequences
 				/*
                     while(tagsToMatch)
                         {
@@ -262,7 +265,6 @@ int final_state_tagger(std::string Contextualrulefile,
 							}
 						}
 					}
-
 					else if (strcmp(when, "WDAND2AFT") == 0) {
 						if (count < corpus_max_index - 1) {
 							if (strcmp_nocase(word, Corpus->Token[count].getWord() /*word_corpus_array[count]*/) ==
@@ -282,7 +284,6 @@ int final_state_tagger(std::string Contextualrulefile,
 							}
 						}
 					}
-
 					else if (strcmp(when, "NEXT2TAG") == 0) {
 						if (count < corpus_max_index - 1) {
 							if (sametokpos(tag, Corpus->next2(count) /*tag_corpus_array[count+2]*/)) {
@@ -385,7 +386,6 @@ int final_state_tagger(std::string Contextualrulefile,
 							}
 						}
 					}
-
 					else if (strcmp(when, "PREV2TAG") == 0) {
 						if (count > 1) {
 							if (sametokpos(tag, Corpus->prev2(count) /*tag_corpus_array[count-2]*/)) {

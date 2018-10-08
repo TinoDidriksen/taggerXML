@@ -35,6 +35,16 @@ inline auto is_space(const C& c) {
 	return ((c == ' ') || (c == '\t') || (c == '\r') || (c == '\n'));
 }
 
+template<typename Str>
+inline void trim(Str& str) {
+	while (!str.empty() && is_space(str.back())) {
+		str.pop_back();
+	}
+	while (!str.empty() && is_space(str.front())) {
+		str.erase(str.begin());
+	}
+}
+
 inline auto nextline(mmap_region& reg, std::string_view line = {}) {
 	const char* start = reg.buf;
 	const char* end = reg.buf + reg.size;
@@ -111,11 +121,70 @@ struct array_hash {
 };
 
 using NewDarray = std::vector<std::array<std::string_view, 6>>;
-using NewRegistry = std::unordered_map<std::string_view, std::string_view>;
 using SV_Set = std::unordered_set<std::string_view>;
-using SV2 = std::array<std::string_view, 2>;
-using SV2_Set = std::unordered_set<SV2, array_hash<SV2>>;
 
+struct lmdb_reader {
+	lmdb::txn txn;
+	lmdb::dbi dbi;
+
+	lmdb_reader(lmdb::env& env)
+		: txn(lmdb::txn::begin(env, nullptr, MDB_RDONLY))
+		, dbi(lmdb::dbi::open(txn))
+	{}
+};
+
+struct lmdb_writer {
+	lmdb::txn txn;
+	lmdb::dbi dbi;
+
+	lmdb_writer(lmdb::env& env)
+		: txn(lmdb::txn::begin(env))
+		, dbi(lmdb::dbi::open(txn))
+	{}
+};
+
+inline auto& join(std::string& trg, std::string_view a, char g, std::string_view b) {
+	trg.clear();
+	trg += a;
+	trg += g;
+	trg += b;
+	return trg;
+}
+
+inline bool exists(lmdb_reader& rd, std::string_view key) {
+	if (key.empty()) {
+		return false;
+	}
+	lmdb::val k{key.data(), key.size()};
+	lmdb::val v{};
+	auto rv = rd.dbi.get(rd.txn, k, v);
+	return rv;
+}
+
+inline auto size(lmdb::env& env) {
+	MDB_stat mdbs;
+	lmdb::env_stat(env, &mdbs);
+	return mdbs.ms_entries;
+}
+
+inline std::string_view find_or_default(lmdb_reader& rd, std::string_view key) {
+	if (key.empty()) {
+		return {};
+	}
+	lmdb::val k{ key.data(), key.size() };
+	lmdb::val v{};
+	auto rv = rd.dbi.get(rd.txn, k, v);
+	if (!rv) {
+		return {};
+	}
+	return {v.data(), v.size()};
+}
+
+inline std::string_view find_or_default(lmdb_reader& rd, const char* key) {
+	return find_or_default(rd, std::string_view{ key });
+}
+
+//*
 template<typename C, typename T>
 inline auto find_or_default(C& cont, const T& key) {
 	auto it = cont.find(key);
@@ -124,6 +193,7 @@ inline auto find_or_default(C& cont, const T& key) {
 	}
 	return it->second;
 }
+//*/
 
 inline auto strcmp(std::string_view a, const char* b) {
 	return a.compare(b);

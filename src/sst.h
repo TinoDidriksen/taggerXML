@@ -42,11 +42,11 @@ public:
 struct optionStruct;
 
 int start_state_tagger(
-  NewRegistry& lexicon_hash,
+  lmdb::env& lexicon_hash,
   corpus* Corpus,
-  SV2_Set& bigram_hash,
+  lmdb::env& bigram_hash,
   NewDarray& rule_array,
-  SV_Set& wordlist_hash,
+  lmdb::env& wordlist_mdb,
   optionStruct* Options,
   hashmap::hash<strng>* tag_hash);
 
